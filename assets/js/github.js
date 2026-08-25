@@ -134,20 +134,25 @@
     });
   };
 
-  /* raw 优先读取（公开仓库免 Token、免限流） */
+  /* raw 优先读取（公开仓库免 Token、免限流）
+     已登录作者：优先走 API（raw CDN 有秒级~分钟级滞后，发布后立即刷新会读到旧数据） */
   GitHubStore.prototype.readJson = function (path) {
     var self = this, url = this.rawBase() + path + '?_=' + Date.now();
-    return fetch(url, { cache: 'no-store' }).then(function (res) {
-      if (res.ok) return res.json();
-      if (res.status === 404 && !self.token) return null;
-      throw new Error('raw ' + res.status);
-    }).catch(function () {
-      // 私有仓库或 raw 尚未同步 → 回退 API
+    var fromRaw = function () {
+      return fetch(url, { cache: 'no-store' }).then(function (res) {
+        if (res.ok) return res.json();
+        if (res.status === 404 && !self.token) return null;
+        throw new Error('raw ' + res.status);
+      });
+    };
+    var fromApi = function () {
       return self.getFile(path).then(function (f) {
         if (!f) return null;
         try { return JSON.parse(f.text); } catch (e) { return null; }
       });
-    });
+    };
+    if (self.token) return fromApi().catch(fromRaw);   // 作者：API 最新优先，raw 兜底
+    return fromRaw().catch(fromApi);                   // 访客：raw 快读，API 兜底
   };
 
   /* ---------- 清单 ---------- */

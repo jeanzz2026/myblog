@@ -771,8 +771,17 @@
     function attempt() {
       tries++;
       loadData().then(function () {
-        if (id) go(isDraft ? '/' : '/post/' + encodeURIComponent(id));
-        else go('/');
+        if (!id) { go('/'); return; }
+        if (S.posts.some(function (x) { return x.id === id; })) {
+          go(isDraft ? '/' : '/post/' + encodeURIComponent(id));
+          return;
+        }
+        /* raw CDN 滞后：目标文章还没读到 → 直接用 API 单拉这篇（不受缓存影响） */
+        return fetchPostViaApi(id).then(function () {
+          go(isDraft ? '/' : '/post/' + encodeURIComponent(id));
+        });
+      }, function (err) {
+        throw err;
       }).catch(function (err) {
         if (tries < 3) { setTimeout(attempt, 1200); return; }
         toast('数据已保存到云端，但列表刷新失败：' + err.message, true);
@@ -780,6 +789,28 @@
       });
     }
     attempt();
+  }
+
+  /* 用 API 强制读取单篇文章（绕开 raw CDN 缓存），并补进本地列表与清单 */
+  function fetchPostViaApi(id) {
+    if (!S.store) return Promise.reject(new Error('未连接云端'));
+    return S.store.getFile(S.store.postPath(id)).then(function (f) {
+      if (!f) throw new Error('文章文件不存在：' + id);
+      var p;
+      try { p = JSON.parse(f.text); } catch (e) { throw new Error('文章文件解析失败'); }
+      S.manifest = S.manifest || { blog: {}, posts: [] };
+      if (!S.manifest.posts.some(function (x) { return x.id === id; })) {
+        S.manifest.posts.unshift({
+          id: p.id, title: p.title, path: S.store.postPath(id),
+          createdAt: p.createdAt, updatedAt: p.updatedAt,
+          tags: p.tags || [], mood: p.mood || '',
+          excerpt: MD.excerpt(p.body || '', 160), images: (p.images || []).length
+        });
+      }
+      S.posts = S.posts.filter(function (x) { return x.id !== id; });
+      S.posts.unshift(p);
+      return p;
+    });
   }
 
   /* Ctrl+S：新文章快速存草稿，编辑已有文章则保存修改 */
