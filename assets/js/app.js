@@ -246,17 +246,26 @@
 
   function lastUpdated() {
     var t = null;
-    S.posts.forEach(function (p) {
+    visiblePosts().forEach(function (p) {
       var u = p.updatedAt || p.createdAt;
       if (!t || String(u) > String(t)) t = u;
     });
     return t;
   }
 
+  /* ---------------- 可见性（草稿仅作者可见） ---------------- */
+  /* 单用户博客：持有效 PAT 即视为作者本人 */
+  function isOwner() { return !!(S.auth && S.auth.token); }
+
+  function visiblePosts() {
+    if (isOwner()) return S.posts;
+    return S.posts.filter(function (p) { return p.status !== 'draft'; });
+  }
+
   /* ---------------- 过滤 ---------------- */
   function filtered() {
     var q = S.q.trim().toLowerCase();
-    return S.posts.filter(function (p) {
+    return visiblePosts().filter(function (p) {
       if (S.tag && !(p.tags || []).some(function (t) { return t === S.tag; })) return false;
       if (S.month && monthKey(p.createdAt) !== S.month) return false;
       if (q) {
@@ -269,16 +278,17 @@
 
   /* ---------------- 侧栏 ---------------- */
   function renderSidebar() {
-    var recents = S.posts.slice().sort(function (a, b) {
+    var vp = visiblePosts();
+    var recents = vp.slice().sort(function (a, b) {
       return String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt));
     }).slice(0, 6);
 
     var months = {};
-    S.posts.forEach(function (p) { var k = monthKey(p.createdAt); months[k] = (months[k] || 0) + 1; });
+    vp.forEach(function (p) { var k = monthKey(p.createdAt); months[k] = (months[k] || 0) + 1; });
     var mKeys = Object.keys(months).sort().reverse();
 
     var tags = {};
-    S.posts.forEach(function (p) { (p.tags || []).forEach(function (t) { tags[t] = (tags[t] || 0) + 1; }); });
+    vp.forEach(function (p) { (p.tags || []).forEach(function (t) { tags[t] = (tags[t] || 0) + 1; }); });
     var tKeys = Object.keys(tags).sort(function (a, b) { return tags[b] - tags[a]; });
 
     var html = '';
@@ -326,7 +336,7 @@
       }).join('') + '</div>' + (S.tag ? '<div class="sp-search-hint"><a href="#/">← 取消标签筛选</a></div>' : ''), tKeys.length);
     }
 
-    /* 云端（同步 / 上传覆盖 / 备份） */
+    /* 云端（同步 / 上传覆盖） */
     var cloudState = S.demo ? '演示模式（未连接仓库）'
       : (S.store ? ('已连接云端：' + esc(S.store.owner + '/' + S.store.repo))
         : (S.cfg.owner && S.cfg.repo ? ('只读模式：' + esc(S.cfg.owner + '/' + S.cfg.repo)) : '未连接'));
@@ -334,12 +344,9 @@
       '<div class="sp-search-hint" style="margin:0 0 9px">' + cloudState + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:7px">' +
       '<button class="sp-btn" data-act="sync" style="width:100%">🔄 从云端同步</button>' +
-      '<button class="sp-btn sp-btn-primary" data-act="upload" style="width:100%">⬆️ 上传到云端（覆盖）</button>' +
+      '<button class="sp-btn sp-btn-primary" data-act="upload" style="width:100%">⬆️ 上传到云端（覆盖文章+图片）</button>' +
       '</div>' +
-      '<div style="display:flex;gap:6px;margin-top:7px">' +
-      '<button class="sp-btn" data-act="export" style="flex:1;font-size:12px">⬇️ 下载备份</button>' +
-      '<button class="sp-btn" data-act="import" style="flex:1;font-size:12px">⬆️ 备份文件</button>' +
-      '</div>', 1);
+      '<div class="sp-search-hint" style="margin-top:7px">图片在插入时已直接存进仓库，此操作会再次覆盖全部文章，并把正文里仍内嵌的本地图片一并上传。</div>', 1);
 
     $('#sidebar').innerHTML = html;
   }
@@ -414,7 +421,7 @@
 
   function renderSingle(m) {
     var p = S.posts.filter(function (x) { return x.id === S.postId; })[0];
-    if (!p) {
+    if (!p || (p.status === 'draft' && !isOwner())) {
       m.innerHTML = (S.loading ? loadingBox() :
         '<div class="sp-empty"><b>找不到这篇文章</b><a href="#/">← 回到首页</a></div>');
       return;
@@ -430,7 +437,8 @@
 
     return '<article class="entry' + (collapsed ? ' is-collapsed' : '') + '" data-id="' + esc(p.id) + '">' +
       '<div class="entry-head">' +
-      '<div class="entry-title">' + (p.mood ? esc(p.mood) + ' ' : '') +
+      '<div class="entry-title">' + (p.status === 'draft' && isOwner() ? '<span class="draft-badge">📝 草稿</span> ' : '') +
+      (p.mood ? esc(p.mood) + ' ' : '') +
       '<a href="#/post/' + encodeURIComponent(p.id) + '">' + esc(p.title) + '</a></div>' +
       '<div class="entry-meta">' +
       '<span>📅 发表于 ' + fmtFull(p.createdAt) + '</span>' +
@@ -452,7 +460,7 @@
 
   function renderArchive(m) {
     var groups = {};
-    S.posts.forEach(function (p) {
+    visiblePosts().forEach(function (p) {
       var k = monthKey(p.createdAt);
       (groups[k] = groups[k] || []).push(p);
     });
@@ -546,7 +554,10 @@
       '<div class="ed-imgs" id="edImgs">' + imgThumbs(p) + '</div></div>' +
       '</div></div>' +
       '<div class="ed-foot">' +
-      '<button class="sp-btn sp-btn-primary" data-act="save">💾 ' + (p._isNew ? '发布文章' : '保存修改') + '</button>' +
+      (p._isNew
+        ? '<button class="sp-btn sp-btn-primary" data-act="save">🚀 发布</button>' +
+          '<button class="sp-btn" data-act="savedraft">💾 保存草稿</button>'
+        : '<button class="sp-btn sp-btn-primary" data-act="save">💾 保存修改</button>') +
       '<button class="sp-btn" data-act="cancel">取消</button>' +
       '<span class="right">' +
       (p._isNew ? '<button class="sp-link-btn" data-act="cleardraft">清空草稿</button>' :
@@ -703,32 +714,57 @@
     });
   }
 
-  /* 保存 / 删除 */
-  function savePost() {
+  /* 保存 / 删除
+     mode: 'draft'  → 存为草稿（仅作者可见）
+           'publish' → 发布（前台可见） */
+  function savePost(mode) {
     if (!(S.auth && S.auth.token) || !S.store || !S.store.canWrite()) { openLogin(); return; }
     var p = collectEditor();
-    if (!p.title) { toast('给文章起个标题吧', true); $('#edTitle').focus(); return; }
-    if (!p.body.trim()) { toast('正文还是空的', true); $('#edBody').focus(); return; }
+    var isDraft = (mode === 'draft');
+
+    if (isDraft) {
+      if (!p.title.trim() && !p.body.trim()) { toast('草稿还是空的，先写点什么吧', true); $('#edBody').focus(); return; }
+    } else {
+      if (!p.title.trim()) { toast('给文章起个标题吧', true); $('#edTitle').focus(); return; }
+      if (!p.body.trim()) { toast('正文还是空的', true); $('#edBody').focus(); return; }
+    }
 
     var payload = {
-      id: p.id, title: p.title, body: p.body, tags: p.tags || [], mood: p.mood || '',
-      createdAt: p.createdAt, updatedAt: new Date().toISOString(),
-      images: p.images || []
+      id: p.id,
+      title: p.title.trim() || '未命名草稿',
+      body: p.body,
+      tags: p.tags || [],
+      mood: p.mood || '',
+      createdAt: p.createdAt,
+      updatedAt: new Date().toISOString(),
+      images: p.images || [],
+      status: isDraft ? 'draft' : 'published'
     };
-    busy(true, '正在提交到 GitHub…');
+    busy(true, isDraft ? '正在保存草稿…' : '正在发布到 GitHub…');
     S.manifest = S.manifest || { blog: {}, posts: [] };
     S.store.savePost(payload, S.manifest).then(function () {
       busy(false);
-      try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
+      if (isDraft) {
+        /* 云端草稿 + 本机备份（未登录/换浏览器也能续写） */
+        try { payload._isNew = p._isNew; localStorage.setItem(LS_DRAFT, JSON.stringify(payload)); } catch (e) { }
+      } else {
+        try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
+      }
       S.editing = null;
-      toast('已发布 ✅');
+      toast(isDraft ? '草稿已保存 📝' : '已发布 ✅');
       return loadData();
     }).then(function () {
-      go('/post/' + encodeURIComponent(payload.id));
+      go(isDraft ? '/' : '/post/' + encodeURIComponent(payload.id));
     }).catch(function (err) {
       busy(false);
-      toast('保存失败：' + err.message, true);
+      toast((isDraft ? '保存草稿失败' : '发布失败') + '：' + err.message, true);
     });
+  }
+
+  /* Ctrl+S：新文章快速存草稿，编辑已有文章则保存修改 */
+  function quickSave() {
+    if (S.editing && S.editing._isNew) savePost('draft');
+    else savePost('publish');
   }
 
   function delPost(id) {
@@ -820,10 +856,37 @@
     loadData();
   }
 
+  /* 设置：上传头像到仓库 */
+  function uploadAvatar(file) {
+    if (!file) return;
+    if (!(S.auth && S.auth.token) || !S.store || !S.store.canWrite()) {
+      toast('上传头像需要先登录（PAT）', true); return;
+    }
+    busy(true, '正在上传头像…');
+    S.store.uploadImage(file).then(function (im) {
+      $('#setAvatar').value = im.url;
+      var prev = $('#setAvatarPrev');
+      prev.src = im.url; prev.hidden = false;
+      busy(false);
+      toast('头像已上传 🖼️');
+    }).catch(function (err) {
+      busy(false);
+      toast('头像上传失败：' + err.message, true);
+    });
+  }
+
   function openSettings() {
     $('#setTitle').value = S.blog.title || '';
     $('#setTagline').value = S.blog.tagline || '';
     $('#setAvatar').value = S.blog.avatar || '';
+    var prev = $('#setAvatarPrev');
+    if (prev) {
+      if (S.blog.avatar) { prev.src = S.blog.avatar; prev.hidden = false; }
+      else { prev.removeAttribute('src'); prev.hidden = true; }
+    }
+    $('#setAvatarHint').textContent = (S.auth && S.auth.token)
+      ? '图片会提交到 data/images/，保存后头像即刻生效。'
+      : '未登录，当前只能填网络图片链接；登录后可上传本地图片。';
     $('#setAbout').value = S.blog.about || '';
     $('#setMsg').textContent = '';
     applySkin(S.blog.skin);
@@ -910,10 +973,15 @@
     $('#doLogin').addEventListener('click', doLogin);
     $('#doSaveSettings').addEventListener('click', saveSettings);
     $('#inToken').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
-    $('#backupFile').addEventListener('change', function (e) {
+    $('#setAvatarFile').addEventListener('change', function (e) {
       var f = e.target.files && e.target.files[0];
-      if (f) importBackup(f);
+      if (f) uploadAvatar(f);
       e.target.value = '';
+    });
+    $('#setAvatarClear').addEventListener('click', function () {
+      $('#setAvatar').value = '';
+      var prev = $('#setAvatarPrev');
+      prev.removeAttribute('src'); prev.hidden = true;
     });
 
     // 移动端侧栏抽屉
@@ -958,8 +1026,7 @@
           case 'new': S.editing = null; go('/new'); break;
           case 'sync': doSync(); break;
           case 'upload': pushCloud(); break;
-          case 'export': exportBackup(); break;
-          case 'import': $('#backupFile').click(); break;
+          case 'savedraft': savePost('draft'); break;
           case 'search': doSearch(); break;
           case 'clearq': S.q = ''; S.page = 1; render(); break;
           case 'clearall': S.q = ''; S.tag = null; S.month = null; S.page = 1; go('/'); render(); break;
@@ -967,10 +1034,10 @@
           case 'permalink': copyPermalink(act.dataset.id); break;
           case 'edit': S.editing = null; go('/edit/' + encodeURIComponent(act.dataset.id)); break;
           case 'del': delPost(act.dataset.id); break;
-          case 'save': savePost(); break;
+          case 'save': savePost('publish'); break;
           case 'cancel':
             if (S.editing && S.editing._isNew && $('#edBody') && $('#edBody').value.trim() &&
-              !confirm('放弃这篇未发布的文章？（草稿仍会保留在本机）')) return;
+              !confirm('放弃这次编辑？（未保存的草稿仍会留在本机）')) return;
             S.editing = null; go('/'); break;
           case 'cleardraft':
             try { localStorage.removeItem(LS_DRAFT); } catch (er) { }
@@ -992,7 +1059,7 @@
         $('#emojiPop').hidden = true;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && S.view === 'editor') {
-        e.preventDefault(); savePost();
+        e.preventDefault(); quickSave();
       }
     });
 
@@ -1026,7 +1093,7 @@
     } else prompt('复制这个链接：', url);
   }
 
-  /* ---------------- 云端：同步 / 备份上传下载（需求 6） ---------------- */
+  /* ---------------- 云端：同步 / 上传覆盖 ---------------- */
   function doSync() {
     if (!S.store) { openLogin(); return; }
     busy(true, '正在从云端同步…');
@@ -1039,70 +1106,50 @@
     });
   }
 
-  function exportBackup() {
-    if (!S.store) { toast('请先登录以连接云端', true); return; }
-    busy(true, '正在打包备份…');
-    var data = {
-      exportedAt: new Date().toISOString(),
-      blog: (S.manifest && S.manifest.blog) || {},
-      posts: S.posts
-    };
-    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'space-backup-' + fmtDay(new Date().toISOString()) + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    busy(false);
-    toast('已导出备份 ⬇️');
-  }
+  /* 把正文里仍内嵌的本地图片（data: URI）上传到仓库，并改写正文与图片清单 */
+  function pushImagesInBody(p) {
+    var body = p.body || '';
+    var re = /!\[[^\]]*\]\((data:image\/[^;]+;base64,[^)\s]+)\)/g;
+    var found = [], m;
+    while ((m = re.exec(body))) found.push(m[1]);
+    if (!found.length) return Promise.resolve(p);
 
-  function importBackup(file) {
-    if (!file) return;
-    if (!S.store || !S.store.canWrite()) { toast('请先登录以连接云端', true); return; }
-    busy(true, '正在读取备份…');
-    var reader = new FileReader();
-    reader.onload = function () {
-      var data;
-      try { data = JSON.parse(reader.result); } catch (e) {
-        busy(false); toast('备份文件不是合法 JSON', true); return;
-      }
-      var posts = (data && data.posts) || [];
-      S.manifest = S.manifest || { blog: {}, posts: [] };
-      if (data.blog) S.manifest.blog = Object.assign({}, S.manifest.blog, data.blog);
-      if (!posts.length) { busy(false); toast('备份里没有文章', true); return; }
-
-      var seq = Promise.resolve(), n = 0;
-      posts.forEach(function (p) {
-        seq = seq.then(function () {
-          if (!p || !p.id || !p.title) return;
-          return S.store.savePost(p, S.manifest).then(function () { n++; });
+    var seq = Promise.resolve();
+    found.forEach(function (uri) {
+      seq = seq.then(function () {
+        var meta = /^data:(image\/\w+);base64,/.exec(uri);
+        var mime = meta ? meta[1] : 'image/png';
+        var bin = atob(uri.split(',')[1]);
+        var arr = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        var name = 'pasted-' + Date.now() + '.' + (mime.split('/')[1] || 'png');
+        var file = new File([arr], name, { type: mime });
+        return S.store.uploadImage(file).then(function (im) {
+          p.body = p.body.split(uri).join(im.url);
+          p.images = p.images || [];
+          p.images.push(im);
         });
       });
-      seq.then(function () {
-        busy(false);
-        toast('已上传 ' + n + ' 篇到云端 ⬆️');
-        return loadData();
-      }).then(function () { go('/'); })
-        .catch(function (err) { busy(false); toast('导入失败：' + err.message, true); });
-    };
-    reader.readAsText(file);
+    });
+    return seq.then(function () { return p; });
   }
 
-  /* 把本地当前文章上传并覆盖云端 */
+  /* 把本地当前文章（含内嵌图片）上传并覆盖云端 */
   function pushCloud() {
     if (!S.store || !S.store.canWrite()) { openLogin(); return; }
     if (!S.posts.length) { toast('本地还没有文章可上传', true); return; }
-    if (!confirm('将把本地当前的 ' + S.posts.length + ' 篇文章上传并覆盖云端（' +
+    if (!confirm('将把本地当前的 ' + S.posts.length + ' 篇文章（含正文里内嵌的图片）上传并覆盖云端（' +
       esc(S.store.owner + '/' + S.store.repo) + '），确定继续？')) return;
     busy(true, '正在上传到云端…');
     S.manifest = S.manifest || { blog: {}, posts: [] };
     var seq = Promise.resolve(), n = 0;
     S.posts.forEach(function (p) {
       seq = seq.then(function () {
-        if (!p || !p.id || !p.title) return;
-        return S.store.savePost(p, S.manifest).then(function () { n++; });
+        if (!p || !p.id) return;
+        return pushImagesInBody(p).then(function (upd) {
+          if (!upd.id || !upd.title) return;
+          return S.store.savePost(upd, S.manifest).then(function () { n++; });
+        });
       });
     });
     seq.then(function () {
