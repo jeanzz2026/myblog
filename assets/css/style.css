@@ -103,6 +103,8 @@ body.is-auth #btnLogin{display:none}
   background:linear-gradient(135deg,#14141c,#1a1a28 55%,#12121a);
   border-bottom:1px solid var(--border);
 }
+.sp-banner-in{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.sp-banner-txt{flex:0 1 auto;min-width:0}
 .sp-banner-in h1{font-size:clamp(22px,4vw,32px);font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2}
 .sp-banner-in p{margin-top:9px;color:var(--text-dim);font-size:14px}
 
@@ -111,11 +113,11 @@ body.is-auth #btnLogin{display:none}
 .sp-sidebar{width:280px;flex:0 0 280px;position:sticky;top:62px;align-self:flex-start;min-width:0}
 .sp-main{flex:1;min-width:0}
 
-/* ---------- Banner 导航 ---------- */
-.banner-nav{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
-.banner-nav a{padding:7px 15px;border:1px solid rgba(255,255,255,.14);border-radius:20px;color:rgba(255,255,255,.62);font-size:13px;background:rgba(255,255,255,.04);transition:.15s;white-space:nowrap}
-.banner-nav a:hover{color:#fff;text-decoration:none;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28)}
-.banner-nav a.on{background:var(--accent);border-color:transparent;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,131,255,.3)}
+/* ---------- Banner 页签导航（与标题同行，中间偏右） ---------- */
+.banner-tabs{margin-left:auto;display:flex;gap:4px;align-items:center}
+.banner-tabs a{position:relative;padding:9px 14px;color:rgba(255,255,255,.6);font-size:14px;font-weight:500;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
+.banner-tabs a:hover{color:#fff;text-decoration:none}
+.banner-tabs a.on{color:#fff;font-weight:700;border-bottom-color:var(--accent)}
 
 /* ---------- 模块 ---------- */
 .mod{border:1px solid var(--border);background:var(--surface-2);margin-bottom:16px;border-radius:var(--radius-sm);overflow:hidden}

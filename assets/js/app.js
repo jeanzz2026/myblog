@@ -237,7 +237,7 @@
     $('#brandName').textContent = S.blog.title || '狗子的Space';
     document.title = (S.blog.title || '狗子的Space') + ' · 极简博客';
 
-    $$('.banner-nav a').forEach(function (a) {
+    $$('.banner-tabs a').forEach(function (a) {
       var v = a.dataset.nav;
       var active = (v === 'home' && (S.view === 'home' || S.view === 'post')) || (v === S.view);
       a.classList.toggle('on', !!active);
