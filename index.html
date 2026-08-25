@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-skin="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的 Space · 极简博客</title>
+<meta name="description" content="极简风格个人博客，数据托管在你自己的 GitHub 仓库">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f6fb5'/%3E%3Cpath d='M6 22V10h4l3 6 3-6h4v12h-3v-7l-3 6h-2l-3-6v7z' fill='%23fff'/%3E%3Ccircle cx='25' cy='11' r='3' fill='%23ffd45e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="sp-shell">
+
+  <!-- ============ 顶部栏 ============ -->
+  <div class="sp-topbar">
+    <div class="sp-topbar-in">
+      <button type="button" id="btnSidebar" aria-label="打开模块栏">☰</button>
+      <a href="#" class="sp-brand" data-nav="home">
+        <span class="sp-brand-mark">◈</span>
+        <span class="sp-brand-txt" id="brandName">狗子的Space</span>
+      </a>
+      <nav class="sp-nav-top">
+        <a href="#" data-nav="home">首页</a>
+        <a href="#" data-nav="archive">存档</a>
+        <a href="#" data-nav="about">关于</a>
+      </nav>
+      <span class="sp-topbar-right">
+        <a href="#" id="btnNew" class="sp-topbtn sp-topbtn-pri sp-hide-anon" data-nav="new">✏️ 写文章</a>
+        <a href="#" id="btnSettings" class="sp-topbtn sp-hide-anon">设置</a>
+        <a href="#" id="btnLogin" class="sp-topbtn sp-topbtn-pri">登录</a>
+        <a href="#" id="btnLogout" class="sp-topbtn sp-hide-anon">退出</a>
+      </span>
+    </div>
+  </div>
+
+  <!-- ============ 头部 ============ -->
+  <div class="sp-banner" id="banner">
+    <div class="sp-banner-in">
+      <h1 id="blogTitle">我的 Space</h1>
+      <p id="blogTagline">记录一些不定期发生的小事 ✨</p>
+    </div>
+  </div>
+
+  <!-- ============ 主体双栏 ============ -->
+  <div class="sp-body">
+    <aside class="sp-sidebar" id="sidebar"></aside>
+    <main class="sp-main" id="main"></main>
+  </div>
+
+  <div class="sp-footer">
+    <span>© <span id="footYear"></span> 我的 Space · 用极简的方式写博客</span>
+    <span class="sp-foot-right">数据存放于你自己的 GitHub 仓库 · <a href="#" id="footHelp">这是怎么工作的？</a></span>
+  </div>
+</div>
+
+<!-- 移动端侧栏遮罩 -->
+<div class="sp-scrim" id="scrim"></div>
+
+<!-- ============ 登录对话框 ============ -->
+<div class="sp-overlay" id="loginModal" hidden>
+  <div class="sp-dialog" style="width:520px">
+    <div class="sp-dialog-bar">
+      <span>登录我的 Space</span>
+      <button class="sp-x" data-close="loginModal" title="关闭">✕</button>
+    </div>
+    <div class="sp-dialog-body">
+      <p class="sp-tip">
+        用 GitHub <b>Personal Access Token (PAT)</b> 登录。文章、图片都会写进你自己名下的一个
+        <b>专属仓库</b>；没有这个仓库时，登录后可以一键创建。
+      </p>
+      <div class="sp-form">
+        <label>GitHub 用户名 <i>（仓库所有者）</i></label>
+        <input type="text" id="inOwner" placeholder="例如 jeanzz2026" autocomplete="username">
+
+        <label>专属仓库名</label>
+        <input type="text" id="inRepo" placeholder="my_blog" value="my_blog">
+
+        <label>分支</label>
+        <input type="text" id="inBranch" value="main">
+
+        <label>Personal Access Token</label>
+        <input type="password" id="inToken" placeholder="ghp_xxx / github_pat_xxx" autocomplete="current-password">
+
+        <label class="sp-check"><input type="checkbox" id="inRemember" checked> 在这台电脑上记住我（存在浏览器 localStorage）</label>
+      </div>
+      <details class="sp-help">
+        <summary>怎么申请 Token？</summary>
+        <ol>
+          <li>GitHub → Settings → Developer settings → <b>Personal access tokens</b></li>
+          <li>Classic：勾选 <code>repo</code> 权限即可；Fine-grained：对目标仓库给 <code>Contents: Read and write</code>，若要自动建仓再加 <code>Administration: Read and write</code>。</li>
+          <li>把 Token 粘贴到上面。它只保存在你本地浏览器，只发往 api.github.com。</li>
+        </ol>
+      </details>
+      <div class="sp-dialog-foot">
+        <span class="sp-msg" id="loginMsg"></span>
+        <button class="sp-btn" data-close="loginModal">取消</button>
+        <button class="sp-btn sp-btn-primary" id="doLogin">登录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 设置对话框 ============ -->
+<div class="sp-overlay" id="settingsModal" hidden>
+  <div class="sp-dialog" style="width:560px">
+    <div class="sp-dialog-bar">
+      <span>Space 设置</span>
+      <button class="sp-x" data-close="settingsModal" title="关闭">✕</button>
+    </div>
+    <div class="sp-dialog-body">
+      <div class="sp-form">
+        <label>Space 名称</label>
+        <input type="text" id="setTitle" placeholder="我的 Space">
+
+        <label>副标题 / 心情签名</label>
+        <input type="text" id="setTagline" placeholder="记录一些不定期发生的小事 ✨">
+
+        <label>头像图片地址 <i>（留空用默认头像）</i></label>
+        <input type="text" id="setAvatar" placeholder="https://...">
+
+        <label>关于我</label>
+        <textarea id="setAbout" rows="4" placeholder="支持 **加粗**、链接、emoji 😊"></textarea>
+      </div>
+      <div class="sp-dialog-foot">
+        <span class="sp-msg" id="setMsg"></span>
+        <button class="sp-btn" data-close="settingsModal">取消</button>
+        <button class="sp-btn sp-btn-primary" id="doSaveSettings">保存到仓库</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 帮助对话框 ============ -->
+<div class="sp-overlay" id="helpModal" hidden>
+  <div class="sp-dialog" style="width:560px">
+    <div class="sp-dialog-bar">
+      <span>这是怎么工作的？</span>
+      <button class="sp-x" data-close="helpModal" title="关闭">✕</button>
+    </div>
+    <div class="sp-dialog-body">
+      <ul class="sp-help-list">
+        <li><b>没有后端。</b>整站是静态页面，所有读写都直接走 GitHub REST API。</li>
+        <li><b>登录 = PAT。</b>Token 只留在你浏览器里，用于往你的专属仓库提交内容。</li>
+        <li><b>数据结构。</b><code>data/index.json</code> 是清单（Space 信息 + 文章目录），每篇文章是 <code>data/posts/&lt;id&gt;.json</code>，图片放 <code>data/images/</code>。</li>
+        <li><b>访客免登录。</b>公开仓库的内容通过 raw.githubusercontent.com 直接读取，访客不需要 Token。</li>
+        <li><b>随时可迁移。</b>文章是纯 JSON + Markdown 文本，仓库在你自己手上。</li>
+      </ul>
+      <div class="sp-dialog-foot">
+        <button class="sp-btn sp-btn-primary" data-close="helpModal">知道了</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ emoji 选择器 ============ -->
+<div class="sp-emoji-pop" id="emojiPop" hidden>
+  <div class="sp-emoji-tabs" id="emojiTabs"></div>
+  <div class="sp-emoji-grid" id="emojiGrid"></div>
+</div>
+
+<div class="sp-toast" id="toast" hidden></div>
+<div class="sp-busy" id="busy" hidden><div class="sp-busy-box"><span class="sp-spin"></span><span id="busyTxt">正在处理…</span></div></div>
+<input type="file" id="backupFile" accept="application/json,.json" hidden>
+
+<script src="config.js"></script>
+<script src="assets/js/emoji.js"></script>
+<script src="assets/js/markdown.js"></script>
+<script src="assets/js/github.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
