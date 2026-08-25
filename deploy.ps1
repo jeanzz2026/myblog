@@ -15,7 +15,7 @@
 $ErrorActionPreference = 'Continue'
 
 $owner  = 'jeanzz2026'
-$repo   = 'my_blog'
+$repo   = 'myblog'
 $branch = 'main'
 $remoteUrl = ('https://github.com/' + $owner + '/' + $repo + '.git')
 

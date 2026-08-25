@@ -6,7 +6,7 @@
    ========================================================= */
 window.BLOG_CONFIG = {
   owner: 'jeanzz2026',        // 已部署的公开博客仓库，访客无需登录即可读取
-  repo: 'my_blog',           // 专属博客数据仓库名
+  repo: 'myblog',            // 专属博客数据仓库名（与 GitHub 仓库名一致）
   branch: 'main',
 
   title: '狗子的Space',
