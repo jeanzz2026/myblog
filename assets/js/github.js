@@ -167,8 +167,20 @@
     manifest.updatedAt = new Date().toISOString();
     manifest.generator = 'msn-space-blog';
     var text = JSON.stringify(manifest, null, 2);
+    return this.putManifestRetry(text, message || 'chore: update manifest', 3);
+  };
+
+  /* 清单写入带重试：每次尝试都重新取 sha，网络抖动/并发 422 时可安全重来 */
+  GitHubStore.prototype.putManifestRetry = function (text, message, tries) {
+    var self = this;
     return this.getFile(MANIFEST).then(function (f) {
-      return self.putText(MANIFEST, text, message || 'chore: update manifest', f && f.sha);
+      return self.putText(MANIFEST, text, message, f && f.sha);
+    }).catch(function (err) {
+      if (tries > 1) {
+        return new Promise(function (res) { setTimeout(res, 1200); })
+          .then(function () { return self.putManifestRetry(text, message, tries - 1); });
+      }
+      throw err;
     });
   };
 
