@@ -8,19 +8,7 @@
     "skin": "dark",
     "owner": "jeanzz2026"
   },
-  "posts": [
-    {
-      "id": "20260826-021705-2qv",
-      "title": "1",
-      "path": "data/posts/20260826-021705-2qv.json",
-      "createdAt": "2026-08-25T18:17:00.000Z",
-      "updatedAt": "2026-08-25T18:17:18.001Z",
-      "tags": [],
-      "mood": "",
-      "excerpt": "😃",
-      "images": 0
-    }
-  ],
+  "posts": [],
   "createdAt": "2026-08-25T09:16:23.676Z",
-  "updatedAt": "2026-08-25T18:17:20.601Z"
+  "updatedAt": "2026-08-25T18:18:48.502Z"
 }
