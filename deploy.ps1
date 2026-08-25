@@ -86,6 +86,8 @@ if ($fetched) {
   if ($remoteHead) {
     Write-Host 'Merging remote content...'
     git merge FETCH_HEAD --allow-unrelated-histories -X ours --no-edit 2>$null
+    # 合并偶尔会从工作区清掉仅远端存在的文件，恢复之，避免下次 git add -A 误删
+    git checkout HEAD -- . 2>$null
   }
 }
 
