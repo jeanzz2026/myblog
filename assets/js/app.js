@@ -234,7 +234,6 @@
     document.body.classList.toggle('is-auth', !!(S.auth && S.auth.token));
     $('#blogTitle').textContent = S.blog.title || '狗子的Space';
     $('#blogTagline').textContent = S.blog.tagline || '';
-    $('#brandName').textContent = S.blog.title || '狗子的Space';
     document.title = (S.blog.title || '狗子的Space') + ' · 极简博客';
 
     $$('.banner-tabs a').forEach(function (a) {
@@ -330,16 +329,11 @@
     }
 
     /* 云端（同步 / 上传覆盖） */
-    var cloudState = S.demo ? '演示模式（未连接仓库）'
-      : (S.store ? ('已连接云端：' + esc(S.store.owner + '/' + S.store.repo))
-        : (S.cfg.owner && S.cfg.repo ? ('只读模式：' + esc(S.cfg.owner + '/' + S.cfg.repo)) : '未连接'));
     html += mod('☁️ 云端', '' +
-      '<div class="sp-search-hint" style="margin:0 0 9px">' + cloudState + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:7px">' +
       '<button class="sp-btn" data-act="sync" style="width:100%">🔄 从云端同步</button>' +
       '<button class="sp-btn sp-btn-primary" data-act="upload" style="width:100%">⬆️ 上传到云端（覆盖文章+图片）</button>' +
-      '</div>' +
-      '<div class="sp-search-hint" style="margin-top:7px">图片在插入时已直接存进仓库，此操作会再次覆盖全部文章，并把正文里仍内嵌的本地图片一并上传。</div>', 1);
+      '</div>', 1);
 
     $('#sidebar').innerHTML = html;
   }

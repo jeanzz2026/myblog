@@ -6,11 +6,11 @@
   /* —— 颜色：近黑主色调 + 克制 indigo 强调色 —— */
   --bg:        #0a0a0c;
   --bg-soft:   #0f0f13;
-  --surface:   #141418;
-  --surface-2: #1a1a20;
-  --surface-3: #23232b;
-  --border:    #26262e;
-  --border-soft:#1c1c22;
+  --surface:   #101014;
+  --surface-2: #1e1e27;
+  --surface-3: #2a2a36;
+  --border:    #31313d;
+  --border-soft:#23232c;
   --text:      #ededf2;
   --text-dim:  #a7a7b4;
   --text-mute: #6b6b78;
@@ -113,11 +113,16 @@ body.is-auth #btnLogin{display:none}
 .sp-sidebar{width:280px;flex:0 0 280px;position:sticky;top:62px;align-self:flex-start;min-width:0}
 .sp-main{flex:1;min-width:0}
 
-/* ---------- Banner 页签：Chrome 浏览器页签效果（与下方内容区相连） ---------- */
-.banner-tabs{margin-left:auto;display:flex;gap:5px;align-items:flex-end;align-self:flex-end}
+/* ---------- Banner 页签：Chrome 效果（居中 / 加宽 / 等分，与下方内容区相连） ---------- */
+.banner-tabs{
+  flex:1 1 100%;                    /* 独占一行，位于标题下方 */
+  display:flex;gap:6px;align-items:flex-end;
+  max-width:640px;margin:0 auto;    /* 水平居中，控制总宽避免过宽 */
+}
 .banner-tabs a{
-  position:relative;display:inline-flex;align-items:center;
-  padding:10px 18px 12px;
+  position:relative;display:flex;align-items:center;justify-content:center;
+  flex:1 1 0;                       /* 三个页签平均分配宽度 */
+  padding:11px 10px 13px;
   border-radius:10px 10px 0 0;               /* 上圆角，Chrome 页签造型 */
   color:rgba(255,255,255,.62);font-size:14px;font-weight:500;
   background:rgba(255,255,255,.06);           /* 非当前页签：压在 banner 上的暗色 */
@@ -140,7 +145,7 @@ body.is-auth #btnLogin{display:none}
 }
 
 /* ---------- 模块 ---------- */
-.mod{border:1px solid var(--border);background:var(--surface-2);margin-bottom:16px;border-radius:var(--radius-sm);overflow:hidden}
+.mod{border:1px solid var(--border);background:var(--surface-2);margin-bottom:16px;border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.03),0 8px 20px rgba(0,0,0,.28)}
 .mod-bar{
   display:flex;align-items:center;gap:6px;padding:10px 13px;
   color:#fff;font-weight:700;font-size:12.5px;letter-spacing:.02em;
@@ -203,7 +208,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 
 .sp-filterbar b{color:var(--text)}
 .sp-filterbar .sp-btn{margin-left:auto}
 
-.entry{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--radius-sm);margin-bottom:16px;overflow:hidden;transition:border-color .15s}
+.entry{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--radius-sm);margin-bottom:16px;overflow:hidden;transition:border-color .15s;box-shadow:0 1px 0 rgba(255,255,255,.03),0 8px 20px rgba(0,0,0,.28)}
 .entry:hover{border-color:#3a3a46}
 .entry-head{padding:12px 15px;border-bottom:1px solid var(--border);background:var(--surface)}
 .entry-title{font-size:18px;font-weight:700;line-height:1.45;color:#fff;letter-spacing:-.01em}
