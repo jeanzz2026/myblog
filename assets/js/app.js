@@ -717,7 +717,9 @@
   /* 保存 / 删除
      mode: 'draft'  → 存为草稿（仅作者可见）
            'publish' → 发布（前台可见） */
+  var saving = false; /* 防止连点重复提交 */
   function savePost(mode) {
+    if (saving) return;
     if (!(S.auth && S.auth.token) || !S.store || !S.store.canWrite()) { openLogin(); return; }
     var p = collectEditor();
     var isDraft = (mode === 'draft');
@@ -740,10 +742,12 @@
       images: p.images || [],
       status: isDraft ? 'draft' : 'published'
     };
+    saving = true;
     busy(true, isDraft ? '正在保存草稿…' : '正在发布到 GitHub…');
     S.manifest = S.manifest || { blog: {}, posts: [] };
     S.store.savePost(payload, S.manifest).then(function () {
       busy(false);
+      saving = false;
       if (isDraft) {
         /* 云端草稿 + 本机备份（未登录/换浏览器也能续写） */
         try { payload._isNew = p._isNew; localStorage.setItem(LS_DRAFT, JSON.stringify(payload)); } catch (e) { }
@@ -751,14 +755,31 @@
         try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
       }
       S.editing = null;
+      /* 写入云端已成功，立即如实提示；刷新列表失败不再误报“发布失败” */
       toast(isDraft ? '草稿已保存 📝' : '已发布 ✅');
-      return loadData();
-    }).then(function () {
-      go(isDraft ? '/' : '/post/' + encodeURIComponent(payload.id));
+      refreshAfterSave(payload.id, isDraft);
     }).catch(function (err) {
       busy(false);
+      saving = false;
       toast((isDraft ? '保存草稿失败' : '发布失败') + '：' + err.message, true);
     });
+  }
+
+  /* 发布/草稿/删除/上传写入云端成功后，刷新列表并跳转；raw/API 网络抖动时自动重试 */
+  function refreshAfterSave(id, isDraft) {
+    var tries = 0;
+    function attempt() {
+      tries++;
+      loadData().then(function () {
+        if (id) go(isDraft ? '/' : '/post/' + encodeURIComponent(id));
+        else go('/');
+      }).catch(function (err) {
+        if (tries < 3) { setTimeout(attempt, 1200); return; }
+        toast('数据已保存到云端，但列表刷新失败：' + err.message, true);
+        go('/');
+      });
+    }
+    attempt();
   }
 
   /* Ctrl+S：新文章快速存草稿，编辑已有文章则保存修改 */
@@ -775,9 +796,8 @@
     S.store.removePost(p, S.manifest).then(function () {
       busy(false); toast('已删除');
       S.editing = null;
-      return loadData();
-    }).then(function () { go('/'); })
-      .catch(function (err) { busy(false); toast('删除失败：' + err.message, true); });
+      refreshAfterSave(null, true);
+    }).catch(function (err) { busy(false); toast('删除失败：' + err.message, true); });
   }
 
   /* ---------------- 登录 / 设置 ---------------- */
@@ -1155,9 +1175,8 @@
     seq.then(function () {
       busy(false);
       toast('已上传 ' + n + ' 篇到云端 ⬆️');
-      return loadData();
-    }).then(function () { go('/'); })
-      .catch(function (err) { busy(false); toast('上传失败：' + err.message, true); });
+      refreshAfterSave(null, true);
+    }).catch(function (err) { busy(false); toast('上传失败：' + err.message, true); });
   }
 
   /* ---------------- 启动 ---------------- */
