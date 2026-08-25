@@ -73,12 +73,20 @@ if (git status --porcelain 2>$null) {
 # ---- 5. merge remote (if any initial commit) then push ----
 $authUrl = ('https://' + $owner + ':' + $token + '@github.com/' + $owner + '/' + $repo + '.git')
 
-try { git fetch origin $branch 2>$null } catch { }
-$remoteBranch = $false
-try { $remoteBranch = [bool](git rev-parse --verify ('origin/' + $branch) 2>$null) } catch { }
-if ($remoteBranch) {
-  Write-Host 'Merging remote initial content...'
-  try { git pull origin $branch --allow-unrelated-histories -X ours --no-edit 2>$null } catch { }
+# fetch 可能因网络抖动失败：重试 3 次，失败不再静默吞掉
+$fetched = $false
+for ($i = 1; $i -le 3 -and -not $fetched; $i++) {
+  git fetch origin $branch 2>$null
+  if ($LASTEXITCODE -eq 0) { $fetched = $true } else { Start-Sleep -Seconds 2 }
+}
+if ($fetched) {
+  # 用 FETCH_HEAD 合并（origin/<branch> 跟踪引用可能缺失，rev-parse 会误判）
+  $remoteHead = $null
+  try { $remoteHead = (git rev-parse --verify FETCH_HEAD 2>$null) } catch { }
+  if ($remoteHead) {
+    Write-Host 'Merging remote content...'
+    git merge FETCH_HEAD --allow-unrelated-histories -X ours --no-edit 2>$null
+  }
 }
 
 git remote set-url origin $authUrl 2>$null
