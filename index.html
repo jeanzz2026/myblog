@@ -31,6 +31,10 @@
   <!-- ============ 头部 ============ -->
   <div class="sp-banner" id="banner">
     <div class="sp-banner-in">
+      <a href="#" class="sp-banner-logo" data-nav="home" aria-label="返回首页">
+        <img src="assets/images/dog-logo.png" alt="" class="sp-banner-logo-img">
+        <span class="sp-banner-logo-txt">酷狗自由涂鸦墙</span>
+      </a>
       <div class="sp-banner-txt">
         <h1 id="blogTitle">我的 Space</h1>
         <p id="blogTagline">记录一些不定期发生的小事 ✨</p>
@@ -116,6 +120,27 @@
         <span class="sp-msg" id="setMsg"></span>
         <button class="sp-btn" data-close="settingsModal">取消</button>
         <button class="sp-btn sp-btn-primary" id="doSaveSettings">保存到仓库</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 关于编辑弹窗 ============ -->
+<div class="sp-overlay" id="aboutEditModal" hidden>
+  <div class="sp-dialog" style="width:560px">
+    <div class="sp-dialog-bar">
+      <span>✏️ 编辑「关于」</span>
+      <button class="sp-x" data-close="aboutEditModal" title="关闭">✕</button>
+    </div>
+    <div class="sp-dialog-body">
+      <div class="sp-form">
+        <label>正文 <i>（支持 Markdown 子集：加粗、链接、代码、emoji）</i></label>
+        <textarea id="aboutEditText" rows="10" placeholder="介绍一下这个 Space 吧…"></textarea>
+      </div>
+      <div class="sp-dialog-foot">
+        <span class="sp-msg" id="aboutEditMsg"></span>
+        <button class="sp-btn" data-close="aboutEditModal">取消</button>
+        <button class="sp-btn sp-btn-primary" id="doSaveAbout">保存到仓库</button>
       </div>
     </div>
   </div>

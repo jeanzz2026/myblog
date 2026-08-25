@@ -4,13 +4,13 @@
    ========================================================= */
 :root{
   /* —— 颜色：近黑主色调 + 克制 indigo 强调色 —— */
-  --bg:        #0a0a0c;
-  --bg-soft:   #0f0f13;
-  --surface:   #101014;
-  --surface-2: #1e1e27;
-  --surface-3: #2a2a36;
-  --border:    #31313d;
-  --border-soft:#23232c;
+  --bg:        #06060a;
+  --bg-soft:   #0c0c11;
+  --surface:   #0d0d14;     /* 外壳：明显比页面底色亮一点的暗 */
+  --surface-2: #232331;     /* 卡片：与外壳拉开大色差 */
+  --surface-3: #3d3d4d;     /* 标题条：与卡片再拉开一档 */
+  --border:    #4f4f63;     /* 边框：清晰可见 */
+  --border-soft:#2d2d3a;
   --text:      #ededf2;
   --text-dim:  #a7a7b4;
   --text-mute: #6b6b78;
@@ -99,14 +99,34 @@ body.is-auth #btnLogin{display:none}
 /* ---------- Banner / 头部 ---------- */
 .sp-banner{
   position:relative;
-  padding:clamp(28px,5vw,46px) clamp(18px,4vw,30px) 0;
-  background:linear-gradient(135deg,#14141c,#1a1a28 55%,#12121a);
+  padding:clamp(24px,4.5vw,40px) clamp(18px,4vw,30px) 0;
+  background:linear-gradient(135deg,#1a1a28,#23233a 55%,#16162a);  /* 比外壳更亮一档，浮起 */
   border-bottom:1px solid var(--border);
 }
-.sp-banner-in{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.sp-banner-in{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
 .sp-banner-txt{flex:0 1 auto;min-width:0}
 .sp-banner-in h1{font-size:clamp(22px,4vw,32px);font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2}
 .sp-banner-in p{margin-top:9px;color:var(--text-dim);font-size:14px}
+/* 顶部 logo（替代原 h1 作为主标题） */
+.sp-banner-logo{
+  flex:0 0 100%;
+  display:flex;align-items:center;gap:13px;
+  padding:2px 0 8px;
+  color:#fff;font-weight:800;letter-spacing:-.01em;
+  text-decoration:none;
+}
+.sp-banner-logo:hover{text-decoration:none;color:#fff}
+.sp-banner-logo-img{
+  width:54px;height:54px;border-radius:13px;
+  object-fit:cover;flex:0 0 auto;
+  box-shadow:0 4px 16px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.06);
+}
+.sp-banner-logo-txt{
+  font-size:clamp(20px,3.6vw,28px);line-height:1.15;
+  text-shadow:0 2px 12px rgba(0,0,0,.4);
+}
+/* h1 由 logo 接管，隐藏避免重复 */
+#blogTitle{display:none}
 
 /* ---------- 主体：双栏 → 单栏 ---------- */
 .sp-body{display:flex;align-items:flex-start;gap:22px;padding:22px}
@@ -145,14 +165,14 @@ body.is-auth #btnLogin{display:none}
 }
 
 /* ---------- 模块 ---------- */
-.mod{border:1px solid var(--border);background:var(--surface-2);margin-bottom:16px;border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.03),0 8px 20px rgba(0,0,0,.28)}
+.mod{border:1px solid var(--border);background:var(--surface-2);margin-bottom:16px;border-radius:var(--radius-sm);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 32px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.3)}
 .mod-bar{
   display:flex;align-items:center;gap:6px;padding:10px 13px;
   color:#fff;font-weight:700;font-size:12.5px;letter-spacing:.02em;
   background:var(--surface-3);
   border-bottom:1px solid var(--border);
 }
-.mod-bar .mod-count{margin-left:auto;font-weight:500;font-size:11px;background:var(--surface);border:1px solid var(--border);padding:1px 8px;border-radius:10px;color:var(--text-dim)}
+.mod-bar .mod-count{margin-left:auto;font-weight:600;font-size:12px;background:none;border:none;padding:0;border-radius:0;color:var(--ok);letter-spacing:.01em}
 .mod-in{padding:12px}
 
 /* profile */
@@ -208,7 +228,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 
 .sp-filterbar b{color:var(--text)}
 .sp-filterbar .sp-btn{margin-left:auto}
 
-.entry{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--radius-sm);margin-bottom:16px;overflow:hidden;transition:border-color .15s;box-shadow:0 1px 0 rgba(255,255,255,.03),0 8px 20px rgba(0,0,0,.28)}
+.entry{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--radius-sm);margin-bottom:16px;overflow:hidden;transition:border-color .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 32px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.3)}
 .entry:hover{border-color:#3a3a46}
 .entry-head{padding:12px 15px;border-bottom:1px solid var(--border);background:var(--surface)}
 .entry-title{font-size:18px;font-weight:700;line-height:1.45;color:#fff;letter-spacing:-.01em}

@@ -15,7 +15,8 @@
     cfg: null, blog: null, auth: null, store: null, manifest: null, posts: [],
     view: 'home', postId: null,
     q: '', tag: null, month: null, page: 1,
-    editing: null, demo: false, expand: {}, loading: false
+    editing: null, demo: false, expand: {}, loading: false,
+    cloudStatus: ''                     /* 云端模块角标：'已同步' / '已上传到云端' */
   };
 
   /* ---------------- 工具 ---------------- */
@@ -333,7 +334,7 @@
       '<div style="display:flex;flex-direction:column;gap:7px">' +
       '<button class="sp-btn" data-act="sync" style="width:100%">🔄 从云端同步</button>' +
       '<button class="sp-btn sp-btn-primary" data-act="upload" style="width:100%">⬆️ 上传到云端（覆盖文章+图片）</button>' +
-      '</div>', 1);
+      '</div>', S.cloudStatus || '');
 
     $('#sidebar').innerHTML = html;
   }
@@ -469,11 +470,14 @@
   }
 
   function renderAbout(m) {
-    m.innerHTML = '<div class="mod"><div class="mod-bar"><span>👋 关于这个 Space</span></div><div class="mod-in">' +
+    var canEdit = isOwner();
+    m.innerHTML = '<div class="mod"><div class="mod-bar"><span>👋 关于这个 Space</span>' +
+      (canEdit ? '<button class="sp-btn sp-btn-sm" data-act="editabout" style="margin-left:auto">✏️ 编辑</button>' : '') +
+      '</div><div class="mod-in">' +
       '<div class="entry-body" style="padding:0">' +
       (S.blog.about ? MD.render(S.blog.about) : '<p>这个 Space 的主人还没写自我介绍。</p>') +
       '</div>' +
-      '<hr style="border:none;border-top:1px dotted var(--sp-line);margin:12px 0">' +
+      '<hr style="border:none;border-top:1px dotted var(--border);margin:12px 0">' +
       '<table class="kv">' +
       '<tr><td>Space 名称</td><td>' + esc(S.blog.title) + '</td></tr>' +
       '<tr><td>数据仓库</td><td>' + (S.store ? '<a href="https://github.com/' + esc(S.store.owner) + '/' + esc(S.store.repo) + '" target="_blank" rel="noopener">' + esc(S.store.owner + '/' + S.store.repo) + '</a>' : '演示模式') + '</td></tr>' +
@@ -482,6 +486,36 @@
       '</table>' +
       '<p class="sp-search-hint" style="margin-top:10px">整站为纯静态页面，登录凭据（PAT）只保存在你的浏览器本地。</p>' +
       '</div></div>';
+  }
+
+  /* 关于页面内联编辑 */
+  function openAboutEdit() {
+    if (!isOwner()) { openLogin(); return; }
+    $('#aboutEditText').value = S.blog.about || '';
+    $('#aboutEditMsg').textContent = '';
+    openModal('aboutEditModal');
+  }
+  function saveAbout() {
+    if (!isOwner() || !S.store || !S.store.canWrite()) { openLogin(); return; }
+    var text = $('#aboutEditText').value;
+    S.blog.about = text;
+    /* 先在本地更新 UI */
+    renderChrome(); render();
+    /* 写云端（只更新 about 字段） */
+    busy(true, '正在保存「关于」到仓库…');
+    S.manifest = S.manifest || { blog: {}, posts: [] };
+    S.manifest.blog = Object.assign({}, S.manifest.blog, {
+      about: text, title: S.blog.title, tagline: S.blog.tagline,
+      avatar: S.blog.avatar, skin: S.blog.skin, owner: S.store.owner
+    });
+    S.store.writeManifest(S.manifest, 'chore: update about').then(function () {
+      busy(false);
+      closeModal('aboutEditModal');
+      toast('「关于」已保存到仓库 ✅');
+    }).catch(function (err) {
+      busy(false);
+      $('#aboutEditMsg').textContent = '保存失败：' + err.message;
+    });
   }
 
   /* ---------------- 编辑器 ---------------- */
@@ -1010,6 +1044,7 @@
     $('#footHelp').addEventListener('click', function (e) { e.preventDefault(); openModal('helpModal'); });
     $('#doLogin').addEventListener('click', doLogin);
     $('#doSaveSettings').addEventListener('click', saveSettings);
+    $('#doSaveAbout').addEventListener('click', saveAbout);
     $('#inToken').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
     $('#setAvatarFile').addEventListener('change', function (e) {
       var f = e.target.files && e.target.files[0];
@@ -1064,6 +1099,7 @@
           case 'new': S.editing = null; go('/new'); break;
           case 'sync': doSync(); break;
           case 'upload': pushCloud(); break;
+          case 'editabout': openAboutEdit(); break;
           case 'savedraft': savePost('draft'); break;
           case 'search': doSearch(); break;
           case 'clearq': S.q = ''; S.page = 1; render(); break;
@@ -1137,6 +1173,8 @@
     busy(true, '正在从云端同步…');
     loadData().then(function () {
       busy(false);
+      S.cloudStatus = '已同步';
+      renderSidebar();
       toast('已同步云端最新内容 🔄');
     }).catch(function (err) {
       busy(false);
@@ -1192,6 +1230,7 @@
     });
     seq.then(function () {
       busy(false);
+      S.cloudStatus = '已上传到云端';
       toast('已上传 ' + n + ' 篇到云端 ⬆️');
       refreshAfterSave(null, true);
     }).catch(function (err) { busy(false); toast('上传失败：' + err.message, true); });
