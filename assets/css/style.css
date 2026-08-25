@@ -61,15 +61,12 @@ mark{background:var(--mark-bg);color:var(--mark-fg);padding:0 2px;border-radius:
   min-height:100vh;
 }
 
-/* ---------- 顶栏 ---------- */
-.sp-topbar{
-  padding:10px 16px;
-  background:rgba(10,10,12,.82);
-  backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:50;
+/* ---------- Banner 顶部行（logo 左 + 操作按钮右） ---------- */
+.sp-banner-top{
+  flex:1 1 100%;
+  display:flex;align-items:center;gap:12px;
+  min-width:0;
 }
-.sp-topbar-in{display:flex;align-items:center;gap:12px;width:100%;min-width:0}
 #btnSidebar{
   display:none;align-items:center;justify-content:center;
   width:34px;height:34px;flex:0 0 auto;
@@ -77,23 +74,13 @@ mark{background:var(--mark-bg);color:var(--mark-fg);padding:0 2px;border-radius:
   border-radius:var(--radius-sm);font-size:15px;cursor:pointer;
 }
 #btnSidebar:hover{background:var(--surface-3)}
-.sp-brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.2px;color:var(--text);font-size:15px;flex:0 0 auto;min-width:0;overflow:hidden;white-space:nowrap}
-.sp-brand:hover{text-decoration:none;color:var(--text)}
-.sp-brand-mark{
-  width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:13px;font-weight:800;
-  box-shadow:0 2px 8px rgba(124,131,255,.35);
-}
-.sp-brand-txt{color:var(--text);overflow:hidden;text-overflow:ellipsis}
-.sp-topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto}
-.sp-topbar a.sp-topbtn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border:1px solid var(--border);border-radius:20px;color:var(--text-dim);font-size:13px;background:var(--surface-2);white-space:nowrap;font-weight:500;transition:.15s}
-.sp-topbar a.sp-topbtn:hover{color:var(--text);text-decoration:none;background:var(--surface-3);border-color:#39414f}
-.sp-topbar a.sp-topbtn-pri{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(124,131,255,.3)}
-.sp-topbar a.sp-topbtn-pri:hover{filter:brightness(1.07);background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
+.sp-banner-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.sp-topbtn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border:1px solid var(--border);border-radius:20px;color:var(--text-dim);font-size:13px;background:var(--surface-2);white-space:nowrap;font-weight:500;transition:.15s}
+.sp-topbtn:hover{color:var(--text);text-decoration:none;background:var(--surface-3);border-color:#39414f}
+.sp-topbtn-pri{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(124,131,255,.3)}
+.sp-topbtn-pri:hover{filter:brightness(1.07);background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
 .sp-hide-anon{display:none}
-body:not(.is-auth) .sp-topbar a.sp-topbtn.sp-hide-anon{display:none}
 body.is-auth .sp-hide-anon{display:inline-flex}
-body.is-auth .sp-topbar a.sp-topbtn.sp-hide-anon{display:inline-flex}
 body.is-auth #btnLogin{display:none}
 
 /* ---------- Banner / 头部 ---------- */
@@ -107,19 +94,19 @@ body.is-auth #btnLogin{display:none}
 .sp-banner-txt{flex:0 1 auto;min-width:0}
 .sp-banner-in h1{font-size:clamp(22px,4vw,32px);font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2}
 .sp-banner-in p{margin-top:9px;color:var(--text-dim);font-size:14px}
-/* 顶部 logo（替代原 h1 作为主标题） */
+/* 顶部 logo（banner 顶部行内，与操作按钮同行） */
 .sp-banner-logo{
-  flex:0 0 100%;
+  flex:0 1 auto;min-width:0;
   display:flex;align-items:center;gap:13px;
-  padding:2px 0 8px;
+  padding:2px 0;
   color:#fff;font-weight:800;letter-spacing:-.01em;
   text-decoration:none;
 }
 .sp-banner-logo:hover{text-decoration:none;color:#fff}
 .sp-banner-logo-img{
-  width:54px;height:54px;border-radius:13px;
+  width:54px;height:54px;border-radius:50%;
   object-fit:cover;flex:0 0 auto;
-  box-shadow:0 4px 16px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.06);
+  box-shadow:0 4px 16px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.08);
 }
 .sp-banner-logo-txt{
   font-size:clamp(20px,3.6vw,28px);line-height:1.15;
@@ -130,7 +117,7 @@ body.is-auth #btnLogin{display:none}
 
 /* ---------- 主体：双栏 → 单栏 ---------- */
 .sp-body{display:flex;align-items:flex-start;gap:22px;padding:22px}
-.sp-sidebar{width:280px;flex:0 0 280px;position:sticky;top:62px;align-self:flex-start;min-width:0}
+.sp-sidebar{width:280px;flex:0 0 280px;position:sticky;top:14px;align-self:flex-start;min-width:0}
 .sp-main{flex:1;min-width:0}
 
 /* ---------- Banner 页签：Chrome 效果（居中 / 加宽 / 等分，与下方内容区相连） ---------- */
@@ -365,12 +352,11 @@ body.sidebar-open .sp-scrim{display:block}
 /* 手机：单栏 + 抽屉侧栏 */
 @media (max-width:760px){
   body{font-size:14px}
-  .sp-topbar{padding:9px 12px;gap:8px}
   #btnSidebar{display:inline-flex}
-  .sp-topbar-in{gap:8px}
-  .sp-brand-txt{display:none}
-  .sp-topbar a.sp-topbtn{padding:6px 11px;font-size:12.5px}
-  .sp-banner{padding:26px 18px 0}
+  .sp-banner-top{gap:8px}
+  .sp-banner-logo-txt{display:none}
+  .sp-topbtn{padding:6px 11px;font-size:12.5px}
+  .sp-banner{padding:18px 14px 0}
   .sp-body{padding:14px;gap:0;flex-direction:column}
   /* 侧栏变抽屉 */
   .sp-sidebar{
@@ -393,9 +379,8 @@ body.sidebar-open .sp-scrim{display:block}
 
 /* 超小屏微调 */
 @media (max-width:400px){
-  .sp-brand-txt{display:none}
-  .sp-topbar a.sp-topbtn{padding:6px 10px}
-  .sp-topbar-right{gap:6px}
+  .sp-topbtn{padding:6px 10px}
+  .sp-banner-actions{gap:6px}
 }
 
 /* ============ 草稿徽标 ============ */
@@ -414,3 +399,12 @@ body.sidebar-open .sp-scrim{display:block}
 .set-avatar-ctl{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
 .set-avatar-actions{display:flex;gap:8px;align-items:center}
 .sp-btn-sm{font-size:12px;padding:5px 10px;display:inline-flex;align-items:center;cursor:pointer}
+
+/* ============ 关于编辑工具栏 ============ */
+.about-toolbar{display:flex;gap:8px;margin:0 0 8px}
+.about-toolbar .sp-btn-sm{cursor:pointer}
+
+/* ============ 彩色标签（颜色由 JS 内联注入） ============ */
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tag .n{opacity:.75;font-size:11px;font-weight:500}
+.tag.on .n{color:inherit}

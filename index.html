@@ -15,26 +15,22 @@
 
 <div class="sp-shell">
 
-  <!-- ============ 顶部栏 ============ -->
-  <div class="sp-topbar">
-    <div class="sp-topbar-in">
-      <button type="button" id="btnSidebar" aria-label="打开模块栏">☰</button>
-      <span class="sp-topbar-right">
-        <a href="#" id="btnNew" class="sp-topbtn sp-topbtn-pri sp-hide-anon" data-nav="new">✏️ 写文章</a>
-        <a href="#" id="btnSettings" class="sp-topbtn sp-hide-anon">设置</a>
-        <a href="#" id="btnLogin" class="sp-topbtn sp-topbtn-pri">登录</a>
-        <a href="#" id="btnLogout" class="sp-topbtn sp-hide-anon">退出</a>
-      </span>
-    </div>
-  </div>
-
-  <!-- ============ 头部 ============ -->
+  <!-- ============ 头部（banner 即页首，按钮在其右上角） ============ -->
   <div class="sp-banner" id="banner">
     <div class="sp-banner-in">
-      <a href="#" class="sp-banner-logo" data-nav="home" aria-label="返回首页">
-        <img src="assets/images/dog-logo.png" alt="" class="sp-banner-logo-img">
-        <span class="sp-banner-logo-txt">酷狗自由涂鸦墙</span>
-      </a>
+      <div class="sp-banner-top">
+        <button type="button" id="btnSidebar" class="sp-banner-menu" aria-label="打开模块栏">☰</button>
+        <a href="#" class="sp-banner-logo" data-nav="home" aria-label="返回首页">
+          <img id="blogLogo" src="assets/images/dog-logo.png" alt="" class="sp-banner-logo-img">
+          <span class="sp-banner-logo-txt">酷狗自由涂鸦墙</span>
+        </a>
+        <span class="sp-banner-actions">
+          <a href="#" id="btnNew" class="sp-topbtn sp-topbtn-pri sp-hide-anon" data-nav="new">✏️ 写文章</a>
+          <a href="#" id="btnSettings" class="sp-topbtn sp-hide-anon">设置</a>
+          <a href="#" id="btnLogin" class="sp-topbtn sp-topbtn-pri">登录</a>
+          <a href="#" id="btnLogout" class="sp-topbtn sp-hide-anon">退出</a>
+        </span>
+      </div>
       <div class="sp-banner-txt">
         <h1 id="blogTitle">我的 Space</h1>
         <p id="blogTagline">记录一些不定期发生的小事 ✨</p>
@@ -135,6 +131,11 @@
     <div class="sp-dialog-body">
       <div class="sp-form">
         <label>正文 <i>（支持 Markdown 子集：加粗、链接、代码、emoji）</i></label>
+        <div class="about-toolbar">
+          <label class="sp-btn sp-btn-sm" for="aboutImgFile">🖼️ 上传图片</label>
+          <input type="file" id="aboutImgFile" accept="image/*" hidden>
+          <button type="button" class="sp-btn sp-btn-sm" id="aboutEmojiBtn">😊 表情</button>
+        </div>
         <textarea id="aboutEditText" rows="10" placeholder="介绍一下这个 Space 吧…"></textarea>
       </div>
       <div class="sp-dialog-foot">

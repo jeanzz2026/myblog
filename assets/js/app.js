@@ -55,6 +55,35 @@
     return String(s || '').split(/[,，;；\s]+/).map(function (x) { return x.trim(); })
       .filter(Boolean).slice(0, 12);
   }
+  /* ---------------- 彩色标签 ---------------- */
+  /* 支持「名称#hex」后缀自定义颜色；否则按名称哈希从调色板取色 */
+  var TAG_PALETTE = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9',
+    '#4dabf7', '#748ffc', '#b197fc', '#f783ac', '#63e6be'];
+  function tagInfo(t) {
+    var m = /^(.+)#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(t);
+    if (m && m[2].length >= 3) {
+      var h = m[2];
+      if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+      return { name: m[1].trim(), color: '#' + h.toLowerCase() };
+    }
+    var h2 = 0;
+    for (var i = 0; i < t.length; i++) h2 = (h2 * 31 + t.charCodeAt(i)) >>> 0;
+    return { name: t, color: TAG_PALETTE[h2 % TAG_PALETTE.length] };
+  }
+  function hexToRgba(hex, a) {
+    var m = /^#([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return 'rgba(255,255,255,.08)';
+    var n = parseInt(m[1], 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function tagHtml(t, active, count) {
+    var ti = tagInfo(t);
+    var style = active
+      ? 'color:#fff;border-color:transparent;background:' + ti.color + ';font-weight:700'
+      : 'color:' + ti.color + ';border-color:' + hexToRgba(ti.color, .45) + ';background:' + hexToRgba(ti.color, .12);
+    return '<a class="tag' + (active ? ' on' : '') + '" href="#/tag/' + encodeURIComponent(t) + '" style="' + style + '">' +
+      esc(ti.name) + (count ? ' <span class="n">' + count + '</span>' : '') + '</a>';
+  }
   function newId(iso) {
     var d = D(iso);
     return '' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' +
@@ -236,6 +265,9 @@
     $('#blogTitle').textContent = S.blog.title || '狗子的Space';
     $('#blogTagline').textContent = S.blog.tagline || '';
     document.title = (S.blog.title || '狗子的Space') + ' · 极简博客';
+    /* 设置里上传的头像显示在 banner 哈士奇位置（无头像则回退默认图） */
+    var logo = $('#blogLogo');
+    if (logo) logo.src = S.blog.avatar || 'assets/images/dog-logo.png';
 
     $$('.banner-tabs a').forEach(function (a) {
       var v = a.dataset.nav;
@@ -324,8 +356,7 @@
     /* 标签 */
     if (tKeys.length) {
       html += mod('🏷️ 标签', '<div class="tags">' + tKeys.map(function (t) {
-        return '<a class="tag ' + (S.tag === t ? 'on' : '') + '" href="#/tag/' + encodeURIComponent(t) + '">' +
-          esc(t) + ' <span class="n">' + tags[t] + '</span></a>';
+        return tagHtml(t, S.tag === t, tags[t]);
       }).join('') + '</div>' + (S.tag ? '<div class="sp-search-hint"><a href="#/">← 取消标签筛选</a></div>' : ''), tKeys.length);
     }
 
@@ -435,7 +466,7 @@
       '<div class="entry-body">' + MD.render(body) + '</div>' +
       '<div class="entry-foot">' +
       ((p.tags || []).length ? '<span class="tags">' + p.tags.map(function (t) {
-        return '<a class="tag" href="#/tag/' + encodeURIComponent(t) + '">' + esc(t) + '</a>';
+        return tagHtml(t);
       }).join('') + '</span>' : '<span class="sp-search-hint" style="margin:0">无标签</span>') +
       '<span class="sp-actions">' +
       (collapsed ? '<button class="sp-btn" data-act="expand" data-id="' + esc(p.id) + '">阅读全文 ▾</button>' : '') +
@@ -477,14 +508,6 @@
       '<div class="entry-body" style="padding:0">' +
       (S.blog.about ? MD.render(S.blog.about) : '<p>这个 Space 的主人还没写自我介绍。</p>') +
       '</div>' +
-      '<hr style="border:none;border-top:1px dotted var(--border);margin:12px 0">' +
-      '<table class="kv">' +
-      '<tr><td>Space 名称</td><td>' + esc(S.blog.title) + '</td></tr>' +
-      '<tr><td>数据仓库</td><td>' + (S.store ? '<a href="https://github.com/' + esc(S.store.owner) + '/' + esc(S.store.repo) + '" target="_blank" rel="noopener">' + esc(S.store.owner + '/' + S.store.repo) + '</a>' : '演示模式') + '</td></tr>' +
-      '<tr><td>文章数</td><td>' + S.posts.length + '</td></tr>' +
-      '<tr><td>最后更新</td><td>' + (lastUpdated() ? fmtFull(lastUpdated()) : '—') + '</td></tr>' +
-      '</table>' +
-      '<p class="sp-search-hint" style="margin-top:10px">整站为纯静态页面，登录凭据（PAT）只保存在你的浏览器本地。</p>' +
       '</div></div>';
   }
 
@@ -515,6 +538,25 @@
     }).catch(function (err) {
       busy(false);
       $('#aboutEditMsg').textContent = '保存失败：' + err.message;
+    });
+  }
+  /* 关于编辑器：上传图片 → 插入 Markdown 图片链接 */
+  function uploadAboutImage(file) {
+    if (!file) return;
+    if (!(S.auth && S.auth.token) || !S.store || !S.store.canWrite()) {
+      toast('上传图片需要先登录（PAT）', true); return;
+    }
+    busy(true, '正在上传图片…');
+    S.store.uploadImage(file).then(function (im) {
+      busy(false);
+      var ta = $('#aboutEditText');
+      var s = ta.selectionStart, v = ta.value;
+      ta.value = v.slice(0, s) + '\n![' + (im.name || '图片') + '](' + im.url + ')\n' + v.slice(ta.selectionEnd);
+      ta.focus();
+      toast('图片已插入 🖼️');
+    }).catch(function (err) {
+      busy(false);
+      toast('上传失败：' + err.message, true);
     });
   }
 
@@ -653,12 +695,13 @@
     updatePreview(); saveDraft();
   }
   function insertAtCursor(text) {
-    var ta = $('#edBody'); if (!ta) return;
+    var ta = (emojiTarget === 'about') ? $('#aboutEditText') : $('#edBody');
+    if (!ta) return;
     var s = ta.selectionStart, v = ta.value;
     ta.value = v.slice(0, s) + text + v.slice(ta.selectionEnd);
     ta.focus();
     ta.selectionStart = ta.selectionEnd = s + text.length;
-    updatePreview(); saveDraft();
+    if (emojiTarget !== 'about') { updatePreview(); saveDraft(); }
   }
   function prefixLines(prefix, ordered) {
     var ta = $('#edBody'); if (!ta) return;
@@ -1045,6 +1088,12 @@
     $('#doLogin').addEventListener('click', doLogin);
     $('#doSaveSettings').addEventListener('click', saveSettings);
     $('#doSaveAbout').addEventListener('click', saveAbout);
+    $('#aboutImgFile').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (f) uploadAboutImage(f);
+      e.target.value = '';
+    });
+    $('#aboutEmojiBtn').addEventListener('click', function (e) { e.preventDefault(); showEmoji(this, 'about'); });
     $('#inToken').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
     $('#setAvatarFile').addEventListener('change', function (e) {
       var f = e.target.files && e.target.files[0];
