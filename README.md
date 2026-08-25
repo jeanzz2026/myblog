@@ -15,7 +15,7 @@
 | 发布 | 不定期发文；标题 / 正文 / 标签 / 心情 emoji / 自定义发表时间；草稿自动存本机 |
 | 内容 | 文字（Markdown 子集：加粗、斜体、删除线、标题、列表、引用、代码块、分割线）、**图片上传**、链接（含裸链接自动识别）、**emoji 选择器** |
 | 图片 | 本机选择 / 粘贴 / 拖拽上传 → 提交到仓库 `data/images/` → 自动插入正文直链 |
-| 左侧栏 | 我的资料、**搜索**（标题+正文+标签全文）、**最新更新文章**（含更新日期）、**按日期存档**（按年月）、标签云、Space 统计（文章数 / 图片数 / 最后更新） |
+| 左侧栏 | 简洁导航、**搜索**（标题+正文+标签全文）、**最新更新**、**按月归档**、标签云、**云端同步 / 上传覆盖 / 备份** |
 | 阅读 | 首页分页、长文折叠「阅读全文」、单篇永久链接（`#/post/<id>`）、存档页、关于页 |
 | 访客 | 公开仓库无需登录即可浏览（走 raw.githubusercontent.com） |
 
@@ -42,16 +42,12 @@ python -m http.server 8080
 # 然后访问 http://localhost:8080
 ```
 
-点右上角**登录**，填：
+点右上角**登录**，只需填写 **Personal Access Token**：
 
-| 字段 | 说明 |
-| --- | --- |
-| GitHub 用户名 | 仓库所有者，留空则用 Token 对应账号 |
-| 专属仓库名 | 默认 `my-space-blog`，不存在时会提示创建 |
-| 分支 | 默认 `main`（会自动跟随仓库默认分支） |
-| Token | 上一步申请的 PAT |
+- 仓库所有者、仓库名、分支已在 `config.js` 中配置好，登录框不再询问。
+- Token 只保存在你浏览器的 localStorage/sessionStorage，仅发往 `api.github.com`。
 
-登录成功后仓库里会自动出现 `data/index.json` 与 `README.md`。
+登录成功后仓库里会自动出现 `data/index.json` 与 `README.md`。若仓库不存在，会提示创建。
 
 ### 3. 写文章
 
@@ -64,12 +60,12 @@ python -m http.server 8080
 
 ```js
 window.BLOG_CONFIG = {
-  owner: 'your-github-id',   // 你的 GitHub 用户名
-  repo: 'my-space-blog',     // 专属数据仓库
+  owner: 'jeanzz2026',   // 仓库所有者
+  repo: 'myblog',        // 专属数据仓库（与 GitHub 仓库名一致）
   branch: 'main',
-  title: '我的 Space',
+  title: '狗子的Space',
   tagline: '记录一些不定期发生的小事 ✨',
-  skin: 'dark',              // 单一暗色主题
+  skin: 'dark',          // 单一暗色主题
   pageSize: 8
 };
 ```

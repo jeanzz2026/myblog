@@ -237,11 +237,10 @@
     $('#brandName').textContent = S.blog.title || '狗子的Space';
     document.title = (S.blog.title || '狗子的Space') + ' · 极简博客';
 
-    $$('.sp-nav-top a').forEach(function (a) {
+    $$('.sb-nav a').forEach(function (a) {
       var v = a.dataset.nav;
-      var active = (v === 'home' && (S.view === 'home' || S.view === 'post')) ||
-        (v === 'new' && S.view === 'editor') || (v === S.view);
-      a.classList.toggle('is-active', !!active);
+      var active = (v === 'home' && (S.view === 'home' || S.view === 'post')) || (v === S.view);
+      a.classList.toggle('on', !!active);
     });
   }
 
@@ -282,27 +281,18 @@
     S.posts.forEach(function (p) { (p.tags || []).forEach(function (t) { tags[t] = (tags[t] || 0) + 1; }); });
     var tKeys = Object.keys(tags).sort(function (a, b) { return tags[b] - tags[a]; });
 
-    var imgCount = S.posts.reduce(function (n, p) {
-      var c = Array.isArray(p.images) ? p.images.length : (Number(p.images) || 0);
-      return n + c;
-    }, 0);
-    var last = lastUpdated();
-
     var html = '';
 
-    /* 个人档 */
-    html += mod('👤 我的资料', '' +
-      '<div class="pf">' +
-      '<img class="pf-avatar" src="' + esc(S.blog.avatar || DEFAULT_AVATAR) + '" alt="头像" onerror="this.src=\'' + DEFAULT_AVATAR + '\'">' +
-      '<div><div class="pf-name">' + esc(S.blog.title || '我的 Space') + '</div>' +
-      '<div class="pf-mood">' + esc(S.blog.tagline || '') + '</div>' +
-      (S.store ? '<div class="pf-mood" style="margin-top:4px">📦 ' + esc(S.store.owner + '/' + S.store.repo) + '</div>' : '') +
-      '</div></div>' +
-      (S.blog.about ? '<div class="pf-about">' + MD.render(S.blog.about) + '</div>' : ''));
+    /* 导航（简洁，三入口） */
+    html += '<nav class="sb-nav">' +
+      '<a href="#" data-nav="home">首页</a>' +
+      '<a href="#" data-nav="archive">存档</a>' +
+      '<a href="#" data-nav="about">关于</a>' +
+      '</nav>';
 
     /* 搜索 */
     var res = S.q.trim() ? filtered().length : null;
-    html += mod('🔍 搜索这个 Space', '' +
+    html += mod('🔍 搜索', '' +
       '<div class="sp-search">' +
       '<input type="text" id="sbQ" placeholder="关键词、标签…" value="' + esc(S.q) + '">' +
       '<button class="sp-btn" data-act="search">搜索</button></div>' +
@@ -311,7 +301,7 @@
       '</div>');
 
     /* 最新更新 */
-    html += mod('🆕 最新更新文章', recents.length ?
+    html += mod('🆕 最新更新', recents.length ?
       '<ul class="lst">' + recents.map(function (p) {
         var upd = p.updatedAt && p.updatedAt !== p.createdAt;
         return '<li><span class="lst-dot">●</span><a href="#/post/' + encodeURIComponent(p.id) + '">' +
@@ -320,7 +310,7 @@
       }).join('') + '</ul>' : '<div class="sp-search-hint">还没有文章</div>', recents.length);
 
     /* 存档 */
-    html += mod('🗂️ 按日期存档', mKeys.length ?
+    html += mod('🗂️ 按月存档', mKeys.length ?
       '<ul class="arc">' + mKeys.slice(0, 14).map(function (k) {
         return '<li><a href="#/month/' + k + '" class="' + (S.month === k ? 'on' : '') + '">' +
           '<span>' + monthLabel(k) + '</span><span class="n">' + months[k] + ' 篇</span></a></li>';
@@ -336,33 +326,20 @@
       }).join('') + '</div>' + (S.tag ? '<div class="sp-search-hint"><a href="#/">← 取消标签筛选</a></div>' : ''), tKeys.length);
     }
 
-    /* 统计 */
-    html += mod('📊 Space 统计', '<table class="kv">' +
-      '<tr><td>文章总数</td><td>' + S.posts.length + '</td></tr>' +
-      '<tr><td>图片数</td><td>' + imgCount + '</td></tr>' +
-      '<tr><td>标签数</td><td>' + tKeys.length + '</td></tr>' +
-      '<tr><td>最后更新</td><td>' + (last ? fmtDay(last) : '—') + '</td></tr>' +
-      '<tr><td>状态</td><td>' + (S.demo ? '演示' : (S.auth && S.auth.token ? '可编辑' : '只读')) + '</td></tr>' +
-      '</table>');
-
-    /* 写文章入口 */
-    html += mod('✏️ 快速发布', S.auth && S.auth.token ?
-      '<button class="sp-btn sp-btn-primary" data-act="new" style="width:100%">写一篇新文章</button>' :
-      '<div class="sp-search-hint" style="margin:0 0 6px">登录后即可不定期上传文章、图片。</div>' +
-      '<button class="sp-btn sp-btn-primary" data-act="login" style="width:100%">用 GitHub Token 登录</button>');
-
-    /* 云端同步 / 备份（需求 6） */
+    /* 云端（同步 / 上传覆盖 / 备份） */
     var cloudState = S.demo ? '演示模式（未连接仓库）'
       : (S.store ? ('已连接云端：' + esc(S.store.owner + '/' + S.store.repo))
         : (S.cfg.owner && S.cfg.repo ? ('只读模式：' + esc(S.cfg.owner + '/' + S.cfg.repo)) : '未连接'));
     html += mod('☁️ 云端', '' +
-      '<div class="sp-search-hint" style="margin:0 0 8px">' + cloudState + '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px">' +
+      '<div class="sp-search-hint" style="margin:0 0 9px">' + cloudState + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:7px">' +
       '<button class="sp-btn" data-act="sync" style="width:100%">🔄 从云端同步</button>' +
-      '<div style="display:flex;gap:6px">' +
-      '<button class="sp-btn" data-act="export" style="flex:1">⬇️ 备份下载</button>' +
-      '<button class="sp-btn" data-act="import" style="flex:1">⬆️ 备份上传</button>' +
-      '</div></div>', 1);
+      '<button class="sp-btn sp-btn-primary" data-act="upload" style="width:100%">⬆️ 上传到云端（覆盖）</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:7px">' +
+      '<button class="sp-btn" data-act="export" style="flex:1;font-size:12px">⬇️ 下载备份</button>' +
+      '<button class="sp-btn" data-act="import" style="flex:1;font-size:12px">⬆️ 备份文件</button>' +
+      '</div>', 1);
 
     $('#sidebar').innerHTML = html;
   }
@@ -772,40 +749,35 @@
   function closeModal(id) { $('#' + id).hidden = true; }
 
   function openLogin() {
-    var a = S.auth || {};
-    $('#inOwner').value = a.owner || S.cfg.owner || '';
-    $('#inRepo').value = a.repo || S.cfg.repo || 'my-space-blog';
-    $('#inBranch').value = a.branch || S.cfg.branch || 'main';
     $('#inToken').value = '';
     $('#loginMsg').textContent = '';
     openModal('loginModal');
-    setTimeout(function () { $('#inToken').focus(); }, 60);
+    setTimeout(function () { var t = $('#inToken'); if (t) t.focus(); }, 60);
   }
 
   function doLogin() {
-    var owner = $('#inOwner').value.trim();
-    var repo = $('#inRepo').value.trim();
-    var branch = $('#inBranch').value.trim() || 'main';
+    var owner = (S.cfg.owner || '').trim();
+    var repo = (S.cfg.repo || '').trim();
+    var branch = (S.cfg.branch || 'main').trim() || 'main';
     var token = $('#inToken').value.trim();
     var remember = $('#inRemember').checked;
     var msg = $('#loginMsg');
     msg.className = 'sp-msg';
 
+    if (!owner || !repo) { msg.textContent = '配置文件未设置 owner / repo'; return; }
     if (!token) { msg.textContent = '请填写 Personal Access Token'; return; }
-    if (!repo) { msg.textContent = '请填写专属仓库名'; return; }
 
     busy(true, '正在验证 Token…');
     var store = new GitHubStore({ owner: owner, repo: repo, branch: branch, token: token });
 
     store.getUser().then(function (u) {
       var login = u && u.login;
-      if (!owner) { owner = login; store.owner = login; }
       msg.className = 'sp-msg ok';
-      msg.textContent = '身份 OK：' + login + '，检查仓库…';
+      msg.textContent = '身份 OK：' + (login || owner) + '，检查仓库…';
       return store.getRepo().then(function (r) {
         if (r && r.notFound) {
           busy(false);
-          if (owner !== login) throw new Error('仓库 ' + owner + '/' + repo + ' 不存在，且它不属于当前 Token 的账号，无法自动创建。');
+          if (login && login !== owner) throw new Error('仓库 ' + owner + '/' + repo + ' 不存在，且不属于当前 Token 账号 ' + login);
           if (!confirm('仓库 ' + owner + '/' + repo + ' 还不存在。\n\n现在用这个 Token 创建一个公开的专属博客仓库吗？')) {
             throw new Error('已取消');
           }
@@ -828,7 +800,7 @@
         saveAuth(S.auth, remember);
         busy(false);
         closeModal('loginModal');
-        toast('登录成功，欢迎回来 ' + login + ' 👋');
+        toast('登录成功，欢迎回来 ' + (login || owner) + ' 👋');
         return loadData();
       });
     }).catch(function (err) {
@@ -985,6 +957,7 @@
           case 'login': openLogin(); break;
           case 'new': S.editing = null; go('/new'); break;
           case 'sync': doSync(); break;
+          case 'upload': pushCloud(); break;
           case 'export': exportBackup(); break;
           case 'import': $('#backupFile').click(); break;
           case 'search': doSearch(); break;
@@ -1115,6 +1088,29 @@
         .catch(function (err) { busy(false); toast('导入失败：' + err.message, true); });
     };
     reader.readAsText(file);
+  }
+
+  /* 把本地当前文章上传并覆盖云端 */
+  function pushCloud() {
+    if (!S.store || !S.store.canWrite()) { openLogin(); return; }
+    if (!S.posts.length) { toast('本地还没有文章可上传', true); return; }
+    if (!confirm('将把本地当前的 ' + S.posts.length + ' 篇文章上传并覆盖云端（' +
+      esc(S.store.owner + '/' + S.store.repo) + '），确定继续？')) return;
+    busy(true, '正在上传到云端…');
+    S.manifest = S.manifest || { blog: {}, posts: [] };
+    var seq = Promise.resolve(), n = 0;
+    S.posts.forEach(function (p) {
+      seq = seq.then(function () {
+        if (!p || !p.id || !p.title) return;
+        return S.store.savePost(p, S.manifest).then(function () { n++; });
+      });
+    });
+    seq.then(function () {
+      busy(false);
+      toast('已上传 ' + n + ' 篇到云端 ⬆️');
+      return loadData();
+    }).then(function () { go('/'); })
+      .catch(function (err) { busy(false); toast('上传失败：' + err.message, true); });
   }
 
   /* ---------------- 启动 ---------------- */

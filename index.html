@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>狗子的Space · 极简博客</title>
 <meta name="description" content="极简风格个人博客，数据托管在你自己的 GitHub 仓库">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f6fb5'/%3E%3Cpath d='M6 22V10h4l3 6 3-6h4v12h-3v-7l-3 6h-2l-3-6v7z' fill='%23fff'/%3E%3Ccircle cx='25' cy='11' r='3' fill='%23ffd45e'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%237c83ff'/%3E%3Cpath d='M7 23V9h3l3 7 3-7h3v14h-3v-8l-3 7h-1l-3-7v8z' fill='%23fff'/%3E%3Ccircle cx='25' cy='10' r='3' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -20,11 +23,6 @@
         <span class="sp-brand-mark">◈</span>
         <span class="sp-brand-txt" id="brandName">狗子的Space</span>
       </a>
-      <nav class="sp-nav-top">
-        <a href="#" data-nav="home">首页</a>
-        <a href="#" data-nav="archive">存档</a>
-        <a href="#" data-nav="about">关于</a>
-      </nav>
       <span class="sp-topbar-right">
         <a href="#" id="btnNew" class="sp-topbtn sp-topbtn-pri sp-hide-anon" data-nav="new">✏️ 写文章</a>
         <a href="#" id="btnSettings" class="sp-topbtn sp-hide-anon">设置</a>
@@ -49,7 +47,7 @@
   </div>
 
   <div class="sp-footer">
-    <span>© <span id="footYear"></span> 我的 Space · 用极简的方式写博客</span>
+    <span>© <span id="footYear"></span> 狗子的Space · 用极简的方式写博客</span>
     <span class="sp-foot-right">数据存放于你自己的 GitHub 仓库 · <a href="#" id="footHelp">这是怎么工作的？</a></span>
   </div>
 </div>
@@ -59,39 +57,17 @@
 
 <!-- ============ 登录对话框 ============ -->
 <div class="sp-overlay" id="loginModal" hidden>
-  <div class="sp-dialog" style="width:520px">
+  <div class="sp-dialog" style="width:420px">
     <div class="sp-dialog-bar">
-      <span>登录我的 Space</span>
+      <span>登录</span>
       <button class="sp-x" data-close="loginModal" title="关闭">✕</button>
     </div>
     <div class="sp-dialog-body">
-      <p class="sp-tip">
-        用 GitHub <b>Personal Access Token (PAT)</b> 登录。文章、图片都会写进你自己名下的一个
-        <b>专属仓库</b>；没有这个仓库时，登录后可以一键创建。
-      </p>
       <div class="sp-form">
-        <label>GitHub 用户名 <i>（仓库所有者）</i></label>
-        <input type="text" id="inOwner" placeholder="例如 jeanzz2026" autocomplete="username">
-
-        <label>专属仓库名</label>
-        <input type="text" id="inRepo" placeholder="my_blog" value="my_blog">
-
-        <label>分支</label>
-        <input type="text" id="inBranch" value="main">
-
         <label>Personal Access Token</label>
         <input type="password" id="inToken" placeholder="ghp_xxx / github_pat_xxx" autocomplete="current-password">
-
-        <label class="sp-check"><input type="checkbox" id="inRemember" checked> 在这台电脑上记住我（存在浏览器 localStorage）</label>
+        <label class="sp-check"><input type="checkbox" id="inRemember" checked> 在此设备记住登录</label>
       </div>
-      <details class="sp-help">
-        <summary>怎么申请 Token？</summary>
-        <ol>
-          <li>GitHub → Settings → Developer settings → <b>Personal access tokens</b></li>
-          <li>Classic：勾选 <code>repo</code> 权限即可；Fine-grained：对目标仓库给 <code>Contents: Read and write</code>，若要自动建仓再加 <code>Administration: Read and write</code>。</li>
-          <li>把 Token 粘贴到上面。它只保存在你本地浏览器，只发往 api.github.com。</li>
-        </ol>
-      </details>
       <div class="sp-dialog-foot">
         <span class="sp-msg" id="loginMsg"></span>
         <button class="sp-btn" data-close="loginModal">取消</button>
