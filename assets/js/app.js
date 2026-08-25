@@ -237,7 +237,7 @@
     $('#brandName').textContent = S.blog.title || '狗子的Space';
     document.title = (S.blog.title || '狗子的Space') + ' · 极简博客';
 
-    $$('.sb-nav a').forEach(function (a) {
+    $$('.banner-nav a').forEach(function (a) {
       var v = a.dataset.nav;
       var active = (v === 'home' && (S.view === 'home' || S.view === 'post')) || (v === S.view);
       a.classList.toggle('on', !!active);
@@ -292,13 +292,6 @@
     var tKeys = Object.keys(tags).sort(function (a, b) { return tags[b] - tags[a]; });
 
     var html = '';
-
-    /* 导航（简洁，三入口） */
-    html += '<nav class="sb-nav">' +
-      '<a href="#" data-nav="home">首页</a>' +
-      '<a href="#" data-nav="archive">存档</a>' +
-      '<a href="#" data-nav="about">关于</a>' +
-      '</nav>';
 
     /* 搜索 */
     var res = S.q.trim() ? filtered().length : null;

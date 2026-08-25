@@ -111,11 +111,11 @@ body.is-auth #btnLogin{display:none}
 .sp-sidebar{width:280px;flex:0 0 280px;position:sticky;top:62px;align-self:flex-start;min-width:0}
 .sp-main{flex:1;min-width:0}
 
-/* ---------- 侧栏导航（简洁） ---------- */
-.sb-nav{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
-.sb-nav a{padding:7px 13px;border:1px solid var(--border);border-radius:20px;color:var(--text-dim);font-size:13px;background:var(--surface-2);transition:.15s}
-.sb-nav a:hover{color:var(--text);text-decoration:none;background:var(--surface-3);border-color:#39414f}
-.sb-nav a.on{background:var(--accent);border-color:transparent;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,131,255,.3)}
+/* ---------- Banner 导航 ---------- */
+.banner-nav{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+.banner-nav a{padding:7px 15px;border:1px solid rgba(255,255,255,.14);border-radius:20px;color:rgba(255,255,255,.62);font-size:13px;background:rgba(255,255,255,.04);transition:.15s;white-space:nowrap}
+.banner-nav a:hover{color:#fff;text-decoration:none;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28)}
+.banner-nav a.on{background:var(--accent);border-color:transparent;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,131,255,.3)}
 
 /* ---------- 模块 ---------- */
 .mod{border:1px solid var(--border);background:var(--surface-2);margin-bottom:16px;border-radius:var(--radius-sm);overflow:hidden}
