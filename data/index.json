@@ -19,19 +19,8 @@
       "mood": "",
       "excerpt": "test",
       "images": 0
-    },
-    {
-      "id": "20260825-180315-ikx",
-      "title": "未命名草稿",
-      "path": "data/posts/20260825-180315-ikx.json",
-      "createdAt": "2026-08-25T10:03:00.000Z",
-      "updatedAt": "2026-08-25T10:03:55.124Z",
-      "tags": [],
-      "mood": "",
-      "excerpt": "test",
-      "images": 0
     }
   ],
   "createdAt": "2026-08-25T09:16:23.676Z",
-  "updatedAt": "2026-08-25T10:04:52.829Z"
+  "updatedAt": "2026-08-25T10:13:16.430Z"
 }
