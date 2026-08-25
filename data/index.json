@@ -3,12 +3,35 @@
   "blog": {
     "title": "狗子的Space",
     "tagline": "记录一些不定期发生的小事 ✨",
-    "avatar": "",
+    "avatar": "https://raw.githubusercontent.com/jeanzz2026/myblog/main/data/images/1787652287059-__20251016105150_2_105.jpg",
     "about": "欢迎来到狗子的 Space 👋\n这里存放一些**不定期**更新的随笔、照片和链接。",
     "skin": "dark",
     "owner": "jeanzz2026"
   },
-  "posts": [],
+  "posts": [
+    {
+      "id": "20260825-180413-e3l",
+      "title": "111",
+      "path": "data/posts/20260825-180413-e3l.json",
+      "createdAt": "2026-08-25T10:04:00.000Z",
+      "updatedAt": "2026-08-25T10:04:24.574Z",
+      "tags": [],
+      "mood": "",
+      "excerpt": "test",
+      "images": 0
+    },
+    {
+      "id": "20260825-180315-ikx",
+      "title": "未命名草稿",
+      "path": "data/posts/20260825-180315-ikx.json",
+      "createdAt": "2026-08-25T10:03:00.000Z",
+      "updatedAt": "2026-08-25T10:03:55.124Z",
+      "tags": [],
+      "mood": "",
+      "excerpt": "test",
+      "images": 0
+    }
+  ],
   "createdAt": "2026-08-25T09:16:23.676Z",
-  "updatedAt": "2026-08-25T09:16:23.676Z"
+  "updatedAt": "2026-08-25T10:04:52.829Z"
 }
