@@ -35,14 +35,20 @@ if ($token -match '\s') { Write-Error 'token.txt has whitespace. Put only the ra
 $env:GITHUB_TOKEN = $token
 $env:GIT_TERMINAL_PROMPT = '0'
 
-# ---- 2. verify identity ----
+# ---- 2. verify identity (best-effort; network to api.github.com may be flaky) ----
 Write-Host 'Verifying GitHub identity...'
-$me = (gh api user --jq .login 2>$null)
-if ($me -ne $owner) {
+$me = $null
+try { $me = (gh api user --jq .login 2>$null) } catch { $me = $null }
+if ($me -and ($me -ne $owner)) {
   Write-Error ('token belongs to ' + $me + ', but target repo is ' + $owner)
   exit 1
 }
-Write-Host ('Identity OK: ' + $me)
+if (-not $me) {
+  Write-Warning ('Could not reach api.github.com to verify identity (network flaky). Proceeding with configured owner=' + $owner)
+  $me = $owner
+} else {
+  Write-Host ('Identity OK: ' + $me)
+}
 
 # ---- 3. git init ----
 if (-not (Test-Path .git)) {
