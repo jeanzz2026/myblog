@@ -56,7 +56,10 @@
     return fetch(API + path, {
       method: opt.method || 'GET',
       headers: headers,
-      body: opt.body ? JSON.stringify(opt.body) : undefined
+      body: opt.body ? JSON.stringify(opt.body) : undefined,
+      // 关键：GET 一律禁用缓存，否则浏览器会回送过期的 data/index.json sha，
+      // 导致后续 PUT/DELETE 因 "sha does not match" 被 GitHub 拒绝。
+      cache: (opt.method && opt.method !== 'GET') ? undefined : 'no-store'
     }).then(function (res) {
       if (res.status === 404) return { notFound: true, status: 404 };
       return res.text().then(function (txt) {
@@ -214,35 +217,46 @@
     });
   };
 
+  /* 保存文章：写文章文件后，重新读取【最新】清单（不依赖可能过期的本地缓存），
+     合并 meta 后再写回。避免并发/过期缓存导致的 "sha does not match"。 */
   GitHubStore.prototype.savePost = function (post, manifest) {
     var self = this;
     var path = this.postPath(post.id);
-    var isNew = !(manifest.posts || []).some(function (p) { return p.id === post.id; });
+    var isNew = true;
     var text = JSON.stringify(post, null, 2);
 
     return this.getFile(path).then(function (f) {
+      isNew = !f;
       return self.putText(path, text, (isNew ? 'post: ' : 'edit: ') + post.title, f && f.sha);
     }).then(function () {
-      var meta = {
-        id: post.id, title: post.title, path: path,
-        createdAt: post.createdAt, updatedAt: post.updatedAt,
-        tags: post.tags || [], mood: post.mood || '',
-        location: post.location || '', timezone: post.timezone || '',
-        excerpt: MD.excerpt(post.body, 160),
-        images: (post.images || []).length
-      };
-      manifest.posts = (manifest.posts || []).filter(function (p) { return p.id !== post.id; });
-      manifest.posts.unshift(meta);
-      manifest.posts.sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
-      return self.writeManifest(manifest, (isNew ? 'post: ' : 'edit: ') + post.title);
+      return self.readManifest().then(function (m) {
+        m = m || { blog: {}, posts: [] };
+        var meta = {
+          id: post.id, title: post.title, path: path,
+          createdAt: post.createdAt, updatedAt: post.updatedAt,
+          tags: post.tags || [], mood: post.mood || '',
+          location: post.location || '', timezone: post.timezone || '',
+          excerpt: MD.excerpt(post.body, 160),
+          images: (post.images || []).length
+        };
+        m.posts = (m.posts || []).filter(function (p) { return p.id !== post.id; });
+        m.posts.unshift(meta);
+        m.posts.sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
+        return self.writeManifest(m, (isNew ? 'post: ' : 'edit: ') + post.title);
+      });
     });
   };
 
+  /* 删除文章：先删文章文件，再重新读取【最新】清单（而非依赖可能过期的本地缓存），
+     过滤掉该篇后写回。这样即使本地 S.manifest 与服务器不一致，也能拿到正确 sha 与内容。 */
   GitHubStore.prototype.removePost = function (post, manifest) {
     var self = this;
     return this.deleteFile(this.postPath(post.id), 'remove: ' + post.title).then(function () {
-      manifest.posts = (manifest.posts || []).filter(function (p) { return p.id !== post.id; });
-      return self.writeManifest(manifest, 'remove: ' + post.title);
+      return self.readManifest().then(function (m) {
+        if (!m) return null; // 清单已不存在，无需更新
+        m.posts = (m.posts || []).filter(function (p) { return p.id !== post.id; });
+        return self.writeManifest(m, 'remove: ' + post.title);
+      });
     });
   };
 
