@@ -634,32 +634,42 @@
       '<div class="ed-row"><label>标题</label><input type="text" id="edTitle" placeholder="给这篇文章起个名字…" value="' + esc(p.title) + '"></div>' +
       '<div class="ed-row"><label>标签</label>' +
       '<div class="ed-tag-line">' +
-      '<select id="edTagColor" title="标签颜色">' + tagColorOptions() + '</select>' +
-      '<input type="text" id="edTagAdd" list="edTagList" placeholder="输入或选择标签" maxlength="20">' +
+      '<div class="ed-tag-colors" id="edTagColors">' +
+      TAG_PALETTE.map(function (c, i) {
+        return '<button type="button" class="ed-swatch' + (i === 0 ? ' data-active="1"' : '') +
+          '" data-color="' + c + '" title="标签颜色" style="color:' + c + '">' +
+          '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-tag"/></svg></button>';
+      }).join('') +
+      '</div>' +
+      '<input type="hidden" id="edTagColor" value="' + TAG_PALETTE[0] + '">' +
+      '<input type="text" id="edTagAdd" class="ed-tag-title" list="edTagList" placeholder="输入或选择标签" maxlength="20">' +
       '<datalist id="edTagList">' + tagHistoryOptions() + '</datalist>' +
       '<button type="button" class="sp-btn" data-act="addtag">添加</button></div>' +
       '<div class="ed-tag-chips" id="edTagChips"></div>' +
-      '<div class="ed-hint">先选择颜色，再输入文字或从历史标签选择；点击标签可选中，选中后可改颜色</div></div>' +
+      '<div class="ed-hint">先点选一个颜色，再输入文字或从历史标签选择；点击标签可选中，选中后可改颜色</div></div>' +
       '<div class="ed-row"><label>正文</label>' +
       '<div class="ed-toolbar">' +
-      tb('bold', 'B', '加粗 **文字**') + tb('italic', 'I', '斜体 *文字*') + tb('strike', 'S', '删除线 ~~文字~~') +
+      tbIcon('bold', null, 'B', '加粗 **文字**') + tbIcon('italic', null, 'I', '斜体 *文字*') + tbIcon('strike', null, 'S', '删除线 ~~文字~~') +
       '<span class="sep"></span>' +
-      tb('h2', 'H2', '小标题') + tb('quote', '❝', '引用') + tb('ul', '• 列表', '无序列表') + tb('ol', '1. 列表', '有序列表') +
+      tbIcon('h2', null, 'H2', '小标题') + tbIcon('quote', null, '❝', '引用') + tbIcon('ul', 'list', '列表', '无序列表') + tbIcon('ol', 'list-ol', '编号', '有序列表') +
       '<span class="sep"></span>' +
-      tb('link', '🔗 链接', '插入链接') + tb('img-url', '🖼 图片地址', '插入网络图片') +
-      tb('img-up', '⬆️ 上传图片', '从本机上传到仓库') + tb('emoji', '😀 表情', '插入 emoji') +
+      tbIcon('link', null, '🔗 链接', '插入链接') + tbIcon('img-url', null, '🖼 图片', '插入网络图片') + tbIcon('img-up', null, '⬆️ 上传', '从本机上传到仓库') + tbIcon('emoji', null, '😀 表情', '插入 emoji') +
       '<span class="sep"></span>' +
-      tb('code', '</>', '代码块') + tb('hr', '—', '分割线') +
+      tbIcon('code', null, '</> 代码', '代码块') + tbIcon('hr', null, '—', '分割线') +
       '</div>' +
-      '<textarea id="edBody" placeholder="今天想写点什么？😊&#10;&#10;支持 **加粗**、[链接](https://example.com)、![图片](地址)、emoji ✨">' + esc(p.body) + '</textarea></div>' +
+      '<textarea id="edBody" placeholder="今天想写点什么？">' + esc(p.body) + '</textarea></div>' +
       '<div class="ed-row ed-imgs-row" id="edImgsRow"' + ((p.images || []).length ? '' : ' hidden') + '>' +
       '<label>已上传图片</label><div class="ed-imgs" id="edImgs">' + imgThumbs(p) + '</div></div>' +
       '<div class="ed-row ed-meta-row"><label>发表时间</label>' +
       '<div class="ed-meta-fields">' +
-      '<input type="date" id="edDate" value="' + dateForZone(p.createdAt, zone) + '">' +
-      '<input type="time" id="edTime" value="' + timeForZone(p.createdAt, zone) + '">' +
+      '<input type="datetime-local" id="edDateTime" value="' + localDatetimeValue(p.createdAt) + '">' +
       '<select id="edZone">' + timezoneOptions(zone) + '</select></div></div>' +
-      '<div class="ed-row"><label>发表地点</label><input type="text" id="edLocation" placeholder="城市或地点" value="' + esc(p.location || '') + '"></div>' +
+      '<div class="ed-row"><label>发表地点</label>' +
+      '<div class="ed-loc-wrap">' +
+      '<input type="text" id="edLocation" placeholder="输入城市或地点，或点 📍 自动定位" value="' + esc(p.location || '') + '">' +
+      '<button type="button" class="ed-loc-pin" data-act="geolocate" title="获取当前定位">' + ico('map-pin') + '</button>' +
+      '<div class="ed-loc-results" id="edLocResults" hidden></div>' +
+      '</div></div>' +
       '</div>' +
       '<input type="file" id="edFile" accept="image/*" multiple hidden>' +
       '<div class="ed-foot">' +
@@ -677,6 +687,7 @@
     body.addEventListener('input', saveDraft);
     $('#edTitle').addEventListener('input', saveDraft);
     initTagEditor();
+    initLocationPicker();
     $('#edFile').addEventListener('change', function (e) { uploadFiles(e.target.files); e.target.value = ''; });
     body.addEventListener('paste', function (e) {
       var items = (e.clipboardData && e.clipboardData.items) || [];
@@ -696,15 +707,14 @@
   function tb(act, label, title) {
     return '<button type="button" data-tb="' + act + '" title="' + title + '">' + label + '</button>';
   }
+  function tbIcon(act, icon, text, title) {
+    return '<button type="button" data-tb="' + act + '" title="' + title + '">' +
+      (icon ? ico(icon) : '') + (text ? '<span>' + text + '</span>' : '') + '</button>';
+  }
   function imgThumbs(p) {
     return (p.images || []).map(function (im) {
       return '<figure><img src="' + esc(im.url) + '" alt="" data-act="insert-img" data-url="' + esc(im.url) + '" title="点击插入正文">' +
         '<figcaption>' + esc(im.name || '') + '</figcaption></figure>';
-    }).join('');
-  }
-  function tagColorOptions() {
-    return '<option value="" disabled selected>颜色</option>' + TAG_PALETTE.map(function (c) {
-      return '<option value="' + c + '" style="background:' + c + '">● ' + c + '</option>';
     }).join('');
   }
   function tagHistoryOptions() {
@@ -740,12 +750,17 @@
     if (add) add.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addTagFromInput(); } });
     var addBtn = document.querySelector('[data-act="addtag"]');
     if (addBtn) addBtn.addEventListener('click', addTagFromInput);
-    var colorSel = $('#edTagColor');
-    if (colorSel) colorSel.addEventListener('change', function (e) {
-      if (!S.editing._activeTag) { toast('先点选一个标签再改颜色', true); colorSel.value = ''; return; }
-      var t = S.editing._tagList.filter(function (x) { return x.name === S.editing._activeTag; })[0];
-      if (t) { t.color = colorSel.value; serializeTags(); renderTagChips(); saveDraft(); }
-      colorSel.value = '';
+    var colors = $('#edTagColors');
+    if (colors) colors.addEventListener('click', function (e) {
+      var sw = e.target.closest('.ed-swatch'); if (!sw) return;
+      var color = sw.dataset.color;
+      Array.prototype.forEach.call(colors.querySelectorAll('.ed-swatch'), function (s) { s.removeAttribute('data-active'); });
+      sw.setAttribute('data-active', '1');
+      var hid = $('#edTagColor'); if (hid) hid.value = color;
+      if (S.editing._activeTag) {
+        var t = S.editing._tagList.filter(function (x) { return x.name === S.editing._activeTag; })[0];
+        if (t) { t.color = color; serializeTags(); renderTagChips(); saveDraft(); }
+      }
     });
   }
   function renderTagChips() {
@@ -785,6 +800,62 @@
     S.editing._activeTag = name;
     inp.value = ''; serializeTags(); renderTagChips(); saveDraft();
   }
+  /* 发表地点：📍 定位 + 地图搜索（OpenStreetMap Nominatim，免费、无需密钥） */
+  function initLocationPicker() {
+    var inp = $('#edLocation'); if (!inp) return;
+    var box = $('#edLocResults'); if (!box) return;
+    var pin = document.querySelector('[data-act="geolocate"]');
+    if (pin) pin.addEventListener('click', function () {
+      if (!navigator.geolocation) { toast('当前浏览器不支持定位', true); return; }
+      busy(true, '正在定位…');
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        busy(false);
+        var lat = pos.coords.latitude, lon = pos.coords.longitude;
+        reverseGeocode(lat, lon, function (name) {
+          inp.value = name || (lat.toFixed(4) + ', ' + lon.toFixed(4));
+          saveDraft();
+        });
+      }, function (err) {
+        busy(false); toast('定位失败：' + (err && err.message ? err.message : ('代码 ' + err.code)), true);
+      }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
+    });
+    var t;
+    inp.addEventListener('input', function () {
+      clearTimeout(t);
+      var q = inp.value.trim();
+      if (q.length < 2) { box.innerHTML = ''; box.hidden = true; saveDraft(); return; }
+      t = setTimeout(function () {
+        searchPlaces(q, function (list) {
+          if (!list || !list.length) { box.innerHTML = ''; box.hidden = true; return; }
+          box.innerHTML = list.map(function (it) {
+            return '<button type="button" class="ed-loc-item" data-name="' + esc(it.name) + '">' + esc(it.name) + '</button>';
+          }).join('');
+          box.hidden = false;
+        });
+      }, 350);
+    });
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('.ed-loc-item'); if (!b) return;
+      inp.value = b.dataset.name; box.innerHTML = ''; box.hidden = true; saveDraft();
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.ed-loc-wrap')) { box.innerHTML = ''; box.hidden = true; }
+    });
+  }
+  function reverseGeocode(lat, lon, cb) {
+    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lon + '&accept-language=zh-CN', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { cb(j && j.display_name ? j.display_name : null); })
+      .catch(function () { cb(null); });
+  }
+  function searchPlaces(q, cb) {
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(q) + '&limit=6&accept-language=zh-CN', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (arr) {
+        cb((arr || []).map(function (a) { return { name: a.display_name, lat: a.lat, lon: a.lon }; }));
+      })
+      .catch(function () { cb([]); });
+  }
   function showPreview() {
     var p = collectEditor(true);
     var box = $('#previewBody');
@@ -807,11 +878,13 @@
     p.location = ($('#edLocation') && $('#edLocation').value.trim()) || '';
     var zone = ($('#edZone') && $('#edZone').value) || p.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
     p.timezone = zone;
-    var date = $('#edDate') && $('#edDate').value;
-    var time = $('#edTime') && $('#edTime').value;
-    if (date && time) {
-      var parsed = parseZoneDateTime(date, time, zone);
-      if (parsed) p.createdAt = parsed;
+    var dtv = $('#edDateTime') && $('#edDateTime').value; // "YYYY-MM-DDTHH:MM"
+    if (dtv) {
+      var parts = dtv.split('T');
+      if (parts[0] && parts[1]) {
+        var parsed = parseZoneDateTime(parts[0], parts[1], zone);
+        if (parsed) p.createdAt = parsed;
+      }
     }
     if (!silent) p.updatedAt = new Date().toISOString();
     return p;
