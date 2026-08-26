@@ -327,7 +327,7 @@
 
     /* 搜索 */
     var res = S.q.trim() ? filtered().length : null;
-    html += mod('🔍 搜索', '' +
+    html += mod('search', '搜索', '' +
       '<div class="sp-search">' +
       '<input type="text" id="sbQ" placeholder="关键词、标签…" value="' + esc(S.q) + '">' +
       '<button class="sp-btn" data-act="search">搜索</button></div>' +
@@ -336,7 +336,7 @@
       '</div>');
 
     /* 最新更新 */
-    html += mod('🆕 最新更新', recents.length ?
+    html += mod('clock', '最新更新', recents.length ?
       '<ul class="lst">' + recents.map(function (p) {
         var upd = p.updatedAt && p.updatedAt !== p.createdAt;
         return '<li><span class="lst-dot">●</span><a href="#/post/' + encodeURIComponent(p.id) + '">' +
@@ -345,7 +345,7 @@
       }).join('') + '</ul>' : '<div class="sp-search-hint">还没有文章</div>', recents.length);
 
     /* 存档 */
-    html += mod('🗂️ 按月存档', mKeys.length ?
+    html += mod('archive', '按月存档', mKeys.length ?
       '<ul class="arc">' + mKeys.slice(0, 14).map(function (k) {
         return '<li><a href="#/month/' + k + '" class="' + (S.month === k ? 'on' : '') + '">' +
           '<span>' + monthLabel(k) + '</span><span class="n">' + months[k] + ' 篇</span></a></li>';
@@ -355,23 +355,27 @@
 
     /* 标签 */
     if (tKeys.length) {
-      html += mod('🏷️ 标签', '<div class="tags">' + tKeys.map(function (t) {
+      html += mod('tag', '标签', '<div class="tags">' + tKeys.map(function (t) {
         return tagHtml(t, S.tag === t, tags[t]);
       }).join('') + '</div>' + (S.tag ? '<div class="sp-search-hint"><a href="#/">← 取消标签筛选</a></div>' : ''), tKeys.length);
     }
 
     /* 云端（同步 / 上传覆盖） */
-    html += mod('☁️ 云端', '' +
+    html += mod('cloud', '云端', '' +
       '<div style="display:flex;flex-direction:column;gap:7px">' +
-      '<button class="sp-btn" data-act="sync" style="width:100%">🔄 从云端同步</button>' +
-      '<button class="sp-btn sp-btn-primary" data-act="upload" style="width:100%">⬆️ 上传到云端（覆盖文章+图片）</button>' +
+      '<button class="sp-btn" data-act="sync" style="width:100%">' + ico('refresh') + '从云端同步</button>' +
+      '<button class="sp-btn sp-btn-primary" data-act="upload" style="width:100%">' + ico('upload') + '上传到云端（覆盖文章+图片）</button>' +
       '</div>', S.cloudStatus || '');
 
     $('#sidebar').innerHTML = html;
   }
 
-  function mod(title, body, count) {
-    return '<div class="mod"><div class="mod-bar"><span>' + title + '</span>' +
+  function ico(n) {
+    return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-' + n + '"/></svg>';
+  }
+
+  function mod(icon, title, body, count) {
+    return '<div class="mod"><div class="mod-bar">' + (icon ? ico(icon) : '') + '<span>' + title + '</span>' +
       (count ? '<span class="mod-count">' + count + '</span>' : '') +
       '</div><div class="mod-in">' + body + '</div></div>';
   }
@@ -472,7 +476,7 @@
       (collapsed ? '<button class="sp-btn" data-act="expand" data-id="' + esc(p.id) + '">阅读全文 ▾</button>' : '') +
       '<button class="sp-link-btn" data-act="permalink" data-id="' + esc(p.id) + '">🔗 链接</button>' +
       (S.auth && S.auth.token && !S.demo ?
-        '<button class="sp-link-btn" data-act="edit" data-id="' + esc(p.id) + '">✏️ 编辑</button>' +
+        '<button class="sp-link-btn" data-act="edit" data-id="' + esc(p.id) + '">' + ico('pen') + ' 编辑</button>' +
         '<button class="sp-link-btn" data-act="del" data-id="' + esc(p.id) + '" style="color:#a3403e">🗑 删除</button>' : '') +
       '</span></div></article>';
   }
@@ -503,7 +507,7 @@
   function renderAbout(m) {
     var canEdit = isOwner();
     m.innerHTML = '<div class="mod"><div class="mod-bar"><span>👋 关于这个 Space</span>' +
-      (canEdit ? '<button class="sp-btn sp-btn-sm" data-act="editabout" style="margin-left:auto">✏️ 编辑</button>' : '') +
+      (canEdit ? '<button class="sp-btn sp-btn-sm" data-act="editabout" style="margin-left:auto">' + ico('pen') + ' 编辑</button>' : '') +
       '</div><div class="mod-in">' +
       '<div class="entry-body" style="padding:0">' +
       (S.blog.about ? MD.render(S.blog.about) : '<p>这个 Space 的主人还没写自我介绍。</p>') +
@@ -584,7 +588,7 @@
     var p = S.editing;
 
     m.innerHTML = '<div class="mod"><div class="mod-bar"><span>' +
-      (p._isNew ? '✏️ 写新文章' : '✏️ 编辑：' + esc(p.title || '无标题')) + '</span>' +
+      (p._isNew ? '' + ico('pen') + ' 写新文章' : '' + ico('pen') + ' 编辑：' + esc(p.title || '无标题')) + '</span>' +
       '<span class="mod-count">' + (S.auth && S.auth.token ? '可发布' : '未登录') + '</span></div>' +
       '<div class="mod-in">' +
       (S.auth && S.auth.token ? '' :
