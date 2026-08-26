@@ -57,8 +57,9 @@
   }
   /* ---------------- 彩色标签 ---------------- */
   /* 支持「名称#hex」后缀自定义颜色；否则按名称哈希从调色板取色 */
-  var TAG_PALETTE = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9',
-    '#4dabf7', '#748ffc', '#b197fc', '#f783ac', '#63e6be'];
+  /* 调色板复用 banner 左上角窗口控制键三色（红/黄/绿），再扩展到 8 色 */
+  var TAG_PALETTE = ['#ff5f56', '#ffbd2e', '#27c93f', '#5b8cff',
+    '#7c6cff', '#22d3ee', '#ff9f43', '#ff6b9d'];
   function tagInfo(t) {
     var m = /^(.+)#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(t);
     if (m && m[2].length >= 3) {
@@ -353,12 +354,12 @@
       (S.month ? '<div class="sp-search-hint"><a href="#/">← 显示全部月份</a></div>' : '')
       : '<div class="sp-search-hint">还没有存档</div>', mKeys.length);
 
-    /* 标签 */
-    if (tKeys.length) {
-      html += mod('tag', '标签', '<div class="tags">' + tKeys.map(function (t) {
-        return tagHtml(t, S.tag === t, tags[t]);
-      }).join('') + '</div>' + (S.tag ? '<div class="sp-search-hint"><a href="#/">← 取消标签筛选</a></div>' : ''), tKeys.length);
-    }
+    /* 标签（左侧栏位，允许按标签筛选；始终显示，无标签时给提示） */
+    html += mod('tag', '标签', tKeys.length
+      ? '<div class="tags">' + tKeys.map(function (t) {
+          return tagHtml(t, S.tag === t, tags[t]);
+        }).join('') + '</div>' + (S.tag ? '<div class="sp-search-hint"><a href="#/">← 取消标签筛选</a></div>' : '')
+      : '<div class="sp-search-hint">还没有标签 · 写文章时填逗号分隔的标签</div>', tKeys.length);
 
     /* 云端（同步 / 上传覆盖） */
     html += mod('cloud', '云端', '' +
