@@ -8,7 +8,21 @@
     "skin": "dark",
     "owner": "jeanzz2026"
   },
-  "posts": [],
+  "posts": [
+    {
+      "id": "20260826-134144-l2p",
+      "title": "test",
+      "path": "data/posts/20260826-134144-l2p.json",
+      "createdAt": "2026-08-26T05:41:00.000Z",
+      "updatedAt": "2026-08-26T05:42:44.175Z",
+      "tags": [
+        "测试"
+      ],
+      "mood": "",
+      "excerpt": "11111111111",
+      "images": 0
+    }
+  ],
   "createdAt": "2026-08-25T09:16:23.676Z",
-  "updatedAt": "2026-08-26T05:33:27.544Z"
+  "updatedAt": "2026-08-26T05:42:46.256Z"
 }
