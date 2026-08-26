@@ -649,13 +649,13 @@
       '<div class="ed-hint">先点选一个颜色，再输入文字或从历史标签选择；点击标签可选中，选中后可改颜色</div></div>' +
       '<div class="ed-row"><label>正文</label>' +
       '<div class="ed-toolbar">' +
-      tbIcon('bold', null, 'B', '加粗 **文字**') + tbIcon('italic', null, 'I', '斜体 *文字*') + tbIcon('strike', null, 'S', '删除线 ~~文字~~') +
+      tbIcon('bold', 'bold', null, '加粗') + tbIcon('italic', 'italic', null, '斜体') + tbIcon('strike', 'strike', null, '删除线') +
       '<span class="sep"></span>' +
-      tbIcon('h2', null, 'H2', '小标题') + tbIcon('quote', null, '❝', '引用') + tbIcon('ul', 'list', '列表', '无序列表') + tbIcon('ol', 'list-ol', '编号', '有序列表') +
+      tbIcon('h2', 'type', null, '小标题') + tbIcon('quote', 'quote', null, '引用') + tbIcon('ul', 'list', null, '无序列表') + tbIcon('ol', 'list-ol', null, '有序列表') +
       '<span class="sep"></span>' +
-      tbIcon('link', null, '🔗 链接', '插入链接') + tbIcon('img-url', null, '🖼 图片', '插入网络图片') + tbIcon('img-up', null, '⬆️ 上传', '从本机上传到仓库') + tbIcon('emoji', null, '😀 表情', '插入 emoji') +
+      tbIcon('link', 'link', null, '插入链接') + tbIcon('img-url', 'image', null, '插入网络图片') + tbIcon('img-up', 'upload', null, '上传图片') + tbIcon('emoji', 'smile', null, '插入表情') +
       '<span class="sep"></span>' +
-      tbIcon('code', null, '</> 代码', '代码块') + tbIcon('hr', null, '—', '分割线') +
+      tbIcon('code', 'code', null, '代码块') + tbIcon('hr', 'minus', null, '分割线') +
       '</div>' +
       '<textarea id="edBody" placeholder="今天想写点什么？">' + esc(p.body) + '</textarea></div>' +
       '<div class="ed-row ed-imgs-row" id="edImgsRow"' + ((p.images || []).length ? '' : ' hidden') + '>' +
@@ -663,6 +663,7 @@
       '<div class="ed-row ed-meta-row"><label>发表时间</label>' +
       '<div class="ed-meta-fields">' +
       '<input type="datetime-local" id="edDateTime" value="' + localDatetimeValue(p.createdAt) + '">' +
+      '<button type="button" class="ed-cal-btn" data-act="opendate" title="点击选择日期时间">' + ico('calendar') + '</button>' +
       '<select id="edZone">' + timezoneOptions(zone) + '</select></div></div>' +
       '<div class="ed-row"><label>发表地点</label>' +
       '<div class="ed-loc-wrap">' +
@@ -744,7 +745,6 @@
     var p = S.editing;
     if (!p) return;
     p._tagList = p._tagList || (p.tags || []).map(function (t) { var ti = tagInfo(t); return { name: ti.name, color: ti.color }; });
-    if (!p._activeTag && p._tagList[0]) p._activeTag = p._tagList[0].name;
     renderTagChips();
     var add = $('#edTagAdd');
     if (add) add.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addTagFromInput(); } });
@@ -797,7 +797,7 @@
     var colorSel = $('#edTagColor');
     var color = (colorSel && colorSel.value) || TAG_PALETTE[0];
     S.editing._tagList.push({ name: name, color: color });
-    S.editing._activeTag = name;
+    S.editing._activeTag = null;
     inp.value = ''; serializeTags(); renderTagChips(); saveDraft();
   }
   /* 发表地点：📍 定位 + 地图搜索（OpenStreetMap Nominatim，免费、无需密钥） */
@@ -1386,6 +1386,14 @@
           case 'del': delPost(act.dataset.id); break;
           case 'save': savePost('publish'); break;
           case 'preview': showPreview(); break;
+          case 'opendate':
+            (function () {
+              var de = $('#edDateTime');
+              if (!de) return;
+              if (de.showPicker) { try { de.showPicker(); } catch (e2) { de.focus(); } }
+              else de.focus();
+            })();
+            break;
           case 'cancel':
             if (S.editing && S.editing._isNew && $('#edBody') && $('#edBody').value.trim() &&
               !confirm('放弃这次编辑？（未保存的草稿仍会留在本机）')) return;
