@@ -96,6 +96,39 @@
     var d = D(iso);
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
+  /* ---- 时区日期时间辅助 ---- */
+  var TIMEZONES = ['UTC', 'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Seoul', 'Asia/Singapore', 'Asia/Hong_Kong', 'Asia/Taipei',
+    'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'America/Vancouver',
+    'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Europe/Madrid', 'Europe/Rome',
+    'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland', 'Pacific/Honolulu'];
+  function getOffsetMinutes(iso, zone) {
+    var d = new Date(iso || new Date());
+    var str = d.toLocaleString('en-US', { timeZone: zone, timeZoneName: 'longOffset' });
+    var m = str.match(/GMT([+-])(\d{2}):?(\d{2})?$/);
+    if (!m) return 0;
+    var sign = m[1] === '+' ? 1 : -1;
+    var h = parseInt(m[2], 10);
+    var min = parseInt(m[3] || '0', 10);
+    return sign * (h * 60 + min);
+  }
+  function dateForZone(iso, zone) {
+    var d = new Date(iso || new Date());
+    var parts = new Intl.DateTimeFormat('sv-SE', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+    return parts[0].value + '-' + parts[2].value + '-' + parts[4].value;
+  }
+  function timeForZone(iso, zone) {
+    var d = new Date(iso || new Date());
+    var parts = new Intl.DateTimeFormat('sv-SE', { timeZone: zone, hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+    return parts[0].value + ':' + parts[2].value;
+  }
+  function parseZoneDateTime(date, time, zone) {
+    var localMs = new Date(date + 'T' + time + ':00Z').getTime();
+    var off = getOffsetMinutes(new Date(localMs).toISOString(), zone);
+    return new Date(localMs - off * 60000).toISOString();
+  }
+  function timezoneOptions(selected) {
+    return TIMEZONES.map(function (z) { return '<option value="' + z + '"' + (z === selected ? ' selected' : '') + '>' + z + '</option>'; }).join('');
+  }
   var DEFAULT_AVATAR = 'data:image/svg+xml;base64,' + btoa(
     "<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'>" +
     "<rect width='128' height='128' fill='#dceaf8'/>" +
@@ -579,7 +612,8 @@
       var nowIso = new Date().toISOString();
       S.editing = draft && draft._isNew ? draft : {
         id: newId(nowIso), title: '', body: '', tags: [], mood: '',
-        createdAt: nowIso, updatedAt: nowIso, images: [], _isNew: true
+        createdAt: nowIso, updatedAt: nowIso, images: [], _isNew: true,
+        location: '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai'
       };
     }
   }
@@ -588,16 +622,25 @@
     if (!S.editing) prepareEditing();
     if (!S.editing) return;
     var p = S.editing;
+    var zone = p.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
 
     m.innerHTML = '<div class="mod"><div class="mod-bar"><span>' +
       (p._isNew ? '' + ico('pen') + ' 写新文章' : '' + ico('pen') + ' 编辑：' + esc(p.title || '无标题')) + '</span>' +
       '<span class="mod-count">' + (S.auth && S.auth.token ? '可发布' : '未登录') + '</span></div>' +
       '<div class="mod-in">' +
       (S.auth && S.auth.token ? '' :
-        '<div class="sp-filterbar">⚠️ 还没登录，写完也无法保存到仓库。<button class="sp-btn sp-btn-primary" data-act="login">先去登录</button></div>') +
-      '<div class="ed-grid"><div class="ed-left">' +
+        '<div class="sp-filterbar">' + ico('info') + ' 还没登录，写完也无法保存到仓库。<button class="sp-btn sp-btn-primary" data-act="login">先去登录</button></div>') +
+      '<div class="ed-form">' +
       '<div class="ed-row"><label>标题</label><input type="text" id="edTitle" placeholder="给这篇文章起个名字…" value="' + esc(p.title) + '"></div>' +
-      '<div class="ed-row"><label>正文（支持 Markdown / 图片 / 链接 / emoji）</label>' +
+      '<div class="ed-row"><label>标签</label>' +
+      '<div class="ed-tag-line">' +
+      '<select id="edTagColor" title="标签颜色">' + tagColorOptions() + '</select>' +
+      '<input type="text" id="edTagAdd" list="edTagList" placeholder="输入或选择标签" maxlength="20">' +
+      '<datalist id="edTagList">' + tagHistoryOptions() + '</datalist>' +
+      '<button type="button" class="sp-btn" data-act="addtag">添加</button></div>' +
+      '<div class="ed-tag-chips" id="edTagChips"></div>' +
+      '<div class="ed-hint">先选择颜色，再输入文字或从历史标签选择；点击标签可选中，选中后可改颜色</div></div>' +
+      '<div class="ed-row"><label>正文</label>' +
       '<div class="ed-toolbar">' +
       tb('bold', 'B', '加粗 **文字**') + tb('italic', 'I', '斜体 *文字*') + tb('strike', 'S', '删除线 ~~文字~~') +
       '<span class="sep"></span>' +
@@ -608,26 +651,25 @@
       '<span class="sep"></span>' +
       tb('code', '</>', '代码块') + tb('hr', '—', '分割线') +
       '</div>' +
-      '<textarea id="edBody" placeholder="今天想写点什么？😊&#10;&#10;支持 **加粗**、[链接](https://example.com)、![图片](地址)、emoji ✨">' + esc(p.body) + '</textarea>' +
-      '<div class="ed-hint">小技巧：Ctrl+S 保存 · 直接把图片粘贴/拖进输入框也能上传</div></div>' +
-      '<div class="ed-row ed-date-row"><label>发表时间</label><input type="datetime-local" id="edDate" value="' + localDatetimeValue(p.createdAt) + '"></div>' +
-      '</div><div class="ed-right">' +
-      '<div class="ed-row"><label>标签（可自选颜色）</label>' +
-      '<div class="ed-tag-add"><input type="text" id="edTagAdd" placeholder="输入标签后回车添加" maxlength="20"><button class="sp-btn" data-act="addtag" type="button">添加</button></div>' +
-      '<div class="ed-tag-chips" id="edTagChips"></div>' +
-      '<div class="ed-tag-palette" id="edTagPalette">' + TAG_PALETTE.map(function (c) { return '<button type="button" class="ed-swatch" data-color="' + c + '" title="' + c + '"></button>'; }).join('') + '</div>' +
-      '<div class="ed-hint">先点选一个标签，再点色块改颜色；标签会带 🏷 图标显示</div></div>' +
+      '<textarea id="edBody" placeholder="今天想写点什么？😊&#10;&#10;支持 **加粗**、[链接](https://example.com)、![图片](地址)、emoji ✨">' + esc(p.body) + '</textarea></div>' +
+      '<div class="ed-row ed-imgs-row" id="edImgsRow"' + ((p.images || []).length ? '' : ' hidden') + '>' +
+      '<label>已上传图片</label><div class="ed-imgs" id="edImgs">' + imgThumbs(p) + '</div></div>' +
+      '<div class="ed-row ed-meta-row"><label>发表时间</label>' +
+      '<div class="ed-meta-fields">' +
+      '<input type="date" id="edDate" value="' + dateForZone(p.createdAt, zone) + '">' +
+      '<input type="time" id="edTime" value="' + timeForZone(p.createdAt, zone) + '">' +
+      '<select id="edZone">' + timezoneOptions(zone) + '</select></div></div>' +
+      '<div class="ed-row"><label>发表地点</label><input type="text" id="edLocation" placeholder="城市或地点" value="' + esc(p.location || '') + '"></div>' +
+      '</div>' +
       '<input type="file" id="edFile" accept="image/*" multiple hidden>' +
-      '<div class="ed-imgs" id="edImgs">' + imgThumbs(p) + '</div></div>' +
-      '</div></div>' +
       '<div class="ed-foot">' +
-      '<button class="sp-btn sp-btn-primary" data-act="save">🚀 发布</button>' +
-      '<button class="sp-btn" data-act="savedraft">💾 保存草稿</button>' +
-      '<button class="sp-btn" data-act="preview">👁 预览</button>' +
-      '<button class="sp-btn" data-act="cancel">✕ 取消</button>' +
+      '<button class="sp-btn sp-btn-primary" data-act="save">' + ico('pen') + ' 发布</button>' +
+      '<button class="sp-btn" data-act="savedraft">' + ico('check') + ' 保存草稿</button>' +
+      '<button class="sp-btn" data-act="preview">' + ico('search') + ' 预览</button>' +
+      '<button class="sp-btn" data-act="cancel">' + ico('x') + ' 取消</button>' +
       '<span class="right">' +
-      (p._isNew ? '<button class="sp-link-btn" data-act="cleardraft" style="color:#a3403e">🗑 删除草稿</button>' :
-        '<button class="sp-link-btn" data-act="del" data-id="' + esc(p.id) + '" style="color:#a3403e">🗑 删除</button>') +
+      (p._isNew ? '<button class="sp-link-btn" data-act="cleardraft" style="color:#a3403e">' + ico('trash') + ' 删除草稿</button>' :
+        '<button class="sp-link-btn" data-act="del" data-id="' + esc(p.id) + '" style="color:#a3403e">' + ico('trash') + ' 删除</button>') +
       '</span></div>' +
       '</div></div>';
 
@@ -660,6 +702,23 @@
         '<figcaption>' + esc(im.name || '') + '</figcaption></figure>';
     }).join('');
   }
+  function tagColorOptions() {
+    return '<option value="" disabled selected>颜色</option>' + TAG_PALETTE.map(function (c) {
+      return '<option value="' + c + '" style="background:' + c + '">● ' + c + '</option>';
+    }).join('');
+  }
+  function tagHistoryOptions() {
+    var set = {};
+    (S.posts || []).forEach(function (p) {
+      (p.tags || []).forEach(function (t) { set[tagInfo(t).name] = true; });
+    });
+    if (S.manifest && S.manifest.posts) {
+      S.manifest.posts.forEach(function (p) {
+        (p.tags || []).forEach(function (t) { set[tagInfo(t).name] = true; });
+      });
+    }
+    return Object.keys(set).sort().map(function (t) { return '<option value="' + esc(t) + '">'; }).join('');
+  }
   function updatePreview() {
     var pe = $('#edPreview');
     if (!pe) return;
@@ -681,12 +740,12 @@
     if (add) add.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addTagFromInput(); } });
     var addBtn = document.querySelector('[data-act="addtag"]');
     if (addBtn) addBtn.addEventListener('click', addTagFromInput);
-    var pal = $('#edTagPalette');
-    if (pal) pal.addEventListener('click', function (e) {
-      var sw = e.target.closest('.ed-swatch'); if (!sw) return;
-      if (!S.editing._activeTag) { toast('先点选一个标签再选颜色', true); return; }
+    var colorSel = $('#edTagColor');
+    if (colorSel) colorSel.addEventListener('change', function (e) {
+      if (!S.editing._activeTag) { toast('先点选一个标签再改颜色', true); colorSel.value = ''; return; }
       var t = S.editing._tagList.filter(function (x) { return x.name === S.editing._activeTag; })[0];
-      if (t) { t.color = sw.dataset.color; serializeTags(); renderTagChips(); saveDraft(); }
+      if (t) { t.color = colorSel.value; serializeTags(); renderTagChips(); saveDraft(); }
+      colorSel.value = '';
     });
   }
   function renderTagChips() {
@@ -720,8 +779,9 @@
     var name = inp.value.trim(); if (!name) return;
     if (!S.editing._tagList) S.editing._tagList = [];
     if (S.editing._tagList.some(function (t) { return t.name === name; })) { inp.value = ''; toast('标签已存在'); return; }
-    var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-    S.editing._tagList.push({ name: name, color: TAG_PALETTE[h % TAG_PALETTE.length] });
+    var colorSel = $('#edTagColor');
+    var color = (colorSel && colorSel.value) || TAG_PALETTE[0];
+    S.editing._tagList.push({ name: name, color: color });
     S.editing._activeTag = name;
     inp.value = ''; serializeTags(); renderTagChips(); saveDraft();
   }
@@ -744,10 +804,14 @@
     serializeTags();
     p.tags = S.editing.tags || p.tags || [];
     p.mood = p.mood || '';
-    var dv = $('#edDate').value;
-    if (dv) {
-      var d = new Date(dv);
-      if (!isNaN(d)) p.createdAt = d.toISOString();
+    p.location = ($('#edLocation') && $('#edLocation').value.trim()) || '';
+    var zone = ($('#edZone') && $('#edZone').value) || p.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
+    p.timezone = zone;
+    var date = $('#edDate') && $('#edDate').value;
+    var time = $('#edTime') && $('#edTime').value;
+    if (date && time) {
+      var parsed = parseZoneDateTime(date, time, zone);
+      if (parsed) p.createdAt = parsed;
     }
     if (!silent) p.updatedAt = new Date().toISOString();
     return p;
@@ -874,7 +938,9 @@
       createdAt: p.createdAt,
       updatedAt: new Date().toISOString(),
       images: p.images || [],
-      status: isDraft ? 'draft' : 'published'
+      status: isDraft ? 'draft' : 'published',
+      location: p.location || '',
+      timezone: p.timezone || ''
     };
     saving = true;
     busy(true, isDraft ? '正在保存草稿…' : '正在发布到 GitHub…');
@@ -914,8 +980,6 @@
         return fetchPostViaApi(id).then(function () {
           go(isDraft ? '/' : '/post/' + encodeURIComponent(id));
         });
-      }, function (err) {
-        throw err;
       }).catch(function (err) {
         if (tries < 3) { setTimeout(attempt, 1200); return; }
         toast('数据已保存到云端，但列表刷新失败：' + err.message, true);
@@ -955,14 +1019,34 @@
 
   function delPost(id) {
     var p = S.posts.filter(function (x) { return x.id === id; })[0];
-    if (!p) return;
+    if (!p) { toast('文章不存在或已被删除', true); return; }
     if (!confirm('确定删除《' + p.title + '》吗？\n（会从 GitHub 仓库中删除对应文章文件，此操作不可撤销）')) return;
     busy(true, '正在删除…');
     S.store.removePost(p, S.manifest).then(function () {
       busy(false); toast('已删除');
       S.editing = null;
+      /* 立即从本地列表中移除，避免刷新前仍显示 */
+      S.posts = S.posts.filter(function (x) { return x.id !== id; });
+      if (S.manifest && S.manifest.posts) {
+        S.manifest.posts = S.manifest.posts.filter(function (x) { return x.id !== id; });
+      }
+      try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
       refreshAfterSave(null, true);
-    }).catch(function (err) { busy(false); toast('删除失败：' + err.message, true); });
+    }).catch(function (err) {
+      busy(false);
+      /* 如果文章文件已经不存在，只清理清单就算成功 */
+      if (err.status === 404 || /Not Found|404/.test(err.message || '')) {
+        S.posts = S.posts.filter(function (x) { return x.id !== id; });
+        if (S.manifest && S.manifest.posts) {
+          S.manifest.posts = S.manifest.posts.filter(function (x) { return x.id !== id; });
+        }
+        try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
+        toast('已删除（云端文件不存在，仅清理清单）');
+        refreshAfterSave(null, true);
+        return;
+      }
+      toast('删除失败：' + err.message, true);
+    });
   }
 
   /* ---------------- 登录 / 设置 ---------------- */

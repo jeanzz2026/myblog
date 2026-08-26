@@ -227,6 +227,7 @@
         id: post.id, title: post.title, path: path,
         createdAt: post.createdAt, updatedAt: post.updatedAt,
         tags: post.tags || [], mood: post.mood || '',
+        location: post.location || '', timezone: post.timezone || '',
         excerpt: MD.excerpt(post.body, 160),
         images: (post.images || []).length
       };
