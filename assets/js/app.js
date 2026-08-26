@@ -83,6 +83,7 @@
       ? 'color:#fff;border-color:transparent;background:' + ti.color + ';font-weight:700'
       : 'color:' + ti.color + ';border-color:' + hexToRgba(ti.color, .45) + ';background:' + hexToRgba(ti.color, .12);
     return '<a class="tag' + (active ? ' on' : '') + '" href="#/tag/' + encodeURIComponent(t) + '" style="' + style + '">' +
+      '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em;margin-right:4px;vertical-align:-1px"><use href="#ic-tag"/></svg>' +
       esc(ti.name) + (count ? ' <span class="n">' + count + '</span>' : '') + '</a>';
   }
   function newId(iso) {
@@ -231,7 +232,7 @@
     var h = (location.hash || '').replace(/^#\/?/, '');
     var seg = h.split('/').map(decodeURIComponent);
     S.postId = null;
-    if (!h) { S.view = 'home'; return; }
+    if (!h) { S.view = 'home'; S.tag = null; S.month = null; S.q = ''; S.page = 1; return; }
     switch (seg[0]) {
       case 'post': S.view = 'post'; S.postId = seg[1] || null; break;
       case 'new': S.view = 'editor'; break;
@@ -609,35 +610,31 @@
       '</div>' +
       '<textarea id="edBody" placeholder="今天想写点什么？😊&#10;&#10;支持 **加粗**、[链接](https://example.com)、![图片](地址)、emoji ✨">' + esc(p.body) + '</textarea>' +
       '<div class="ed-hint">小技巧：Ctrl+S 保存 · 直接把图片粘贴/拖进输入框也能上传</div></div>' +
-      '<div class="ed-row"><label>实时预览</label><div class="ed-preview" id="edPreview"></div></div>' +
+      '<div class="ed-row ed-date-row"><label>发表时间</label><input type="datetime-local" id="edDate" value="' + localDatetimeValue(p.createdAt) + '"></div>' +
       '</div><div class="ed-right">' +
-      '<div class="ed-row"><label>标签（逗号分隔）</label><input type="text" id="edTags" placeholder="随笔, 照片, 技术" value="' + esc((p.tags || []).join(', ')) + '"></div>' +
-      '<div class="ed-row"><label>心情 emoji</label><div style="display:flex;gap:4px">' +
-      '<input type="text" id="edMood" maxlength="4" style="width:70px" value="' + esc(p.mood || '') + '">' +
-      '<button class="sp-btn" data-act="emoji-mood">选一个 😀</button></div></div>' +
-      '<div class="ed-row"><label>发表时间</label><input type="datetime-local" id="edDate" value="' + localDatetimeValue(p.createdAt) + '"></div>' +
-      '<div class="ed-row"><label>上传图片到仓库</label>' +
-      '<input type="file" id="edFile" accept="image/*" multiple style="border:none;padding:0">' +
-      '<div class="ed-hint">图片会提交到 <code>data/images/</code>，插入的是仓库直链。</div>' +
+      '<div class="ed-row"><label>标签（可自选颜色）</label>' +
+      '<div class="ed-tag-add"><input type="text" id="edTagAdd" placeholder="输入标签后回车添加" maxlength="20"><button class="sp-btn" data-act="addtag" type="button">添加</button></div>' +
+      '<div class="ed-tag-chips" id="edTagChips"></div>' +
+      '<div class="ed-tag-palette" id="edTagPalette">' + TAG_PALETTE.map(function (c) { return '<button type="button" class="ed-swatch" data-color="' + c + '" title="' + c + '"></button>'; }).join('') + '</div>' +
+      '<div class="ed-hint">先点选一个标签，再点色块改颜色；标签会带 🏷 图标显示</div></div>' +
+      '<input type="file" id="edFile" accept="image/*" multiple hidden>' +
       '<div class="ed-imgs" id="edImgs">' + imgThumbs(p) + '</div></div>' +
       '</div></div>' +
       '<div class="ed-foot">' +
-      (p._isNew
-        ? '<button class="sp-btn sp-btn-primary" data-act="save">🚀 发布</button>' +
-          '<button class="sp-btn" data-act="savedraft">💾 保存草稿</button>'
-        : '<button class="sp-btn sp-btn-primary" data-act="save">💾 保存修改</button>') +
-      '<button class="sp-btn" data-act="cancel">取消</button>' +
+      '<button class="sp-btn sp-btn-primary" data-act="save">🚀 发布</button>' +
+      '<button class="sp-btn" data-act="savedraft">💾 保存草稿</button>' +
+      '<button class="sp-btn" data-act="preview">👁 预览</button>' +
+      '<button class="sp-btn" data-act="cancel">✕ 取消</button>' +
       '<span class="right">' +
-      (p._isNew ? '<button class="sp-link-btn" data-act="cleardraft">清空草稿</button>' :
-        '<button class="sp-link-btn" data-act="del" data-id="' + esc(p.id) + '" style="color:#a3403e">🗑 删除这篇</button>') +
+      (p._isNew ? '<button class="sp-link-btn" data-act="cleardraft" style="color:#a3403e">🗑 删除草稿</button>' :
+        '<button class="sp-link-btn" data-act="del" data-id="' + esc(p.id) + '" style="color:#a3403e">🗑 删除</button>') +
       '</span></div>' +
       '</div></div>';
 
     var body = $('#edBody');
-    updatePreview();
-    body.addEventListener('input', function () { updatePreview(); saveDraft(); });
+    body.addEventListener('input', saveDraft);
     $('#edTitle').addEventListener('input', saveDraft);
-    $('#edTags').addEventListener('input', saveDraft);
+    initTagEditor();
     $('#edFile').addEventListener('change', function (e) { uploadFiles(e.target.files); e.target.value = ''; });
     body.addEventListener('paste', function (e) {
       var items = (e.clipboardData && e.clipboardData.items) || [];
@@ -664,8 +661,75 @@
     }).join('');
   }
   function updatePreview() {
+    var pe = $('#edPreview');
+    if (!pe) return;
     var v = $('#edBody') ? $('#edBody').value : '';
-    $('#edPreview').innerHTML = v.trim() ? MD.render(v) : '<span class="sp-search-hint">左边输入内容，这里实时预览…</span>';
+    pe.innerHTML = v.trim() ? MD.render(v) : '<span class="sp-search-hint">左边输入内容，这里实时预览…</span>';
+  }
+  /* 标签编辑器：可选颜色、带 🏷 图标 */
+  function serializeTags() {
+    if (!S.editing) return;
+    S.editing.tags = (S.editing._tagList || []).map(function (t) { return t.name + '#' + t.color; });
+  }
+  function initTagEditor() {
+    var p = S.editing;
+    if (!p) return;
+    p._tagList = p._tagList || (p.tags || []).map(function (t) { var ti = tagInfo(t); return { name: ti.name, color: ti.color }; });
+    if (!p._activeTag && p._tagList[0]) p._activeTag = p._tagList[0].name;
+    renderTagChips();
+    var add = $('#edTagAdd');
+    if (add) add.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addTagFromInput(); } });
+    var addBtn = document.querySelector('[data-act="addtag"]');
+    if (addBtn) addBtn.addEventListener('click', addTagFromInput);
+    var pal = $('#edTagPalette');
+    if (pal) pal.addEventListener('click', function (e) {
+      var sw = e.target.closest('.ed-swatch'); if (!sw) return;
+      if (!S.editing._activeTag) { toast('先点选一个标签再选颜色', true); return; }
+      var t = S.editing._tagList.filter(function (x) { return x.name === S.editing._activeTag; })[0];
+      if (t) { t.color = sw.dataset.color; serializeTags(); renderTagChips(); saveDraft(); }
+    });
+  }
+  function renderTagChips() {
+    var box = $('#edTagChips'); if (!box) return;
+    var list = S.editing._tagList || [];
+    box.innerHTML = list.length ? list.map(function (t) {
+      var on = (S.editing._activeTag === t.name) ? ' on' : '';
+      return '<span class="ed-tag-chip' + on + '" data-tag="' + esc(t.name) + '" style="--c:' + t.color + '">' +
+        '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-tag"/></svg>' +
+        '<span class="ed-tag-name">' + esc(t.name) + '</span>' +
+        '<button type="button" class="ed-tag-x" data-xtag="' + esc(t.name) + '" title="移除">✕</button></span>';
+    }).join('') : '<span class="ed-hint">还没有标签</span>';
+    Array.prototype.forEach.call(box.querySelectorAll('.ed-tag-chip'), function (chip) {
+      chip.addEventListener('click', function (e) {
+        if (e.target.closest('.ed-tag-x')) return;
+        S.editing._activeTag = chip.dataset.tag;
+        renderTagChips();
+      });
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('.ed-tag-x'), function (x) {
+      x.addEventListener('click', function (e) {
+        e.stopPropagation();
+        S.editing._tagList = S.editing._tagList.filter(function (t) { return t.name !== x.dataset.xtag; });
+        if (S.editing._activeTag === x.dataset.xtag) S.editing._activeTag = null;
+        serializeTags(); renderTagChips(); saveDraft();
+      });
+    });
+  }
+  function addTagFromInput() {
+    var inp = $('#edTagAdd'); if (!inp) return;
+    var name = inp.value.trim(); if (!name) return;
+    if (!S.editing._tagList) S.editing._tagList = [];
+    if (S.editing._tagList.some(function (t) { return t.name === name; })) { inp.value = ''; toast('标签已存在'); return; }
+    var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    S.editing._tagList.push({ name: name, color: TAG_PALETTE[h % TAG_PALETTE.length] });
+    S.editing._activeTag = name;
+    inp.value = ''; serializeTags(); renderTagChips(); saveDraft();
+  }
+  function showPreview() {
+    var p = collectEditor(true);
+    var box = $('#previewBody');
+    if (box) box.innerHTML = MD.render(p.body || '');
+    openModal('previewModal');
   }
   function saveDraft() {
     if (!S.editing || !S.editing._isNew) return;
@@ -677,8 +741,9 @@
     if (!p || !$('#edBody')) return p;
     p.title = $('#edTitle').value.trim();
     p.body = $('#edBody').value;
-    p.tags = splitTags($('#edTags').value);
-    p.mood = $('#edMood').value.trim();
+    serializeTags();
+    p.tags = S.editing.tags || p.tags || [];
+    p.mood = p.mood || '';
     var dv = $('#edDate').value;
     if (dv) {
       var d = new Date(dv);
@@ -697,7 +762,7 @@
     ta.focus();
     ta.selectionStart = s + before.length;
     ta.selectionEnd = s + before.length + sel.length;
-    updatePreview(); saveDraft();
+    saveDraft();
   }
   function insertAtCursor(text) {
     var ta = (emojiTarget === 'about') ? $('#aboutEditText') : $('#edBody');
@@ -706,7 +771,7 @@
     ta.value = v.slice(0, s) + text + v.slice(ta.selectionEnd);
     ta.focus();
     ta.selectionStart = ta.selectionEnd = s + text.length;
-    if (emojiTarget !== 'about') { updatePreview(); saveDraft(); }
+    if (emojiTarget !== 'about') { saveDraft(); }
   }
   function prefixLines(prefix, ordered) {
     var ta = $('#edBody'); if (!ta) return;
@@ -719,7 +784,7 @@
     }).join('\n');
     ta.value = v.slice(0, s) + out + v.slice(e);
     ta.focus(); ta.selectionStart = s; ta.selectionEnd = s + out.length;
-    updatePreview(); saveDraft();
+    saveDraft();
   }
 
   function handleToolbar(act) {
@@ -1061,7 +1126,7 @@
     grid.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-em]'); if (!b) return;
       var ch = b.dataset.em;
-      if (emojiTarget === 'mood') { $('#edMood').value = ch; saveDraft(); }
+      if (emojiTarget === 'mood' && $('#edMood')) { $('#edMood').value = ch; saveDraft(); }
       else insertAtCursor(ch);
       $('#emojiPop').hidden = true;
     });
@@ -1163,6 +1228,7 @@
           case 'edit': S.editing = null; go('/edit/' + encodeURIComponent(act.dataset.id)); break;
           case 'del': delPost(act.dataset.id); break;
           case 'save': savePost('publish'); break;
+          case 'preview': showPreview(); break;
           case 'cancel':
             if (S.editing && S.editing._isNew && $('#edBody') && $('#edBody').value.trim() &&
               !confirm('放弃这次编辑？（未保存的草稿仍会留在本机）')) return;
@@ -1170,7 +1236,6 @@
           case 'cleardraft':
             try { localStorage.removeItem(LS_DRAFT); } catch (er) { }
             S.editing = null; prepareEditing(); render(); toast('草稿已清空'); break;
-          case 'emoji-mood': showEmoji(act, 'mood'); break;
           case 'insert-img': insertAtCursor('\n![图片](' + act.dataset.url + ')\n'); break;
         }
         return;
