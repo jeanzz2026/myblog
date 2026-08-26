@@ -299,6 +299,9 @@
     document.body.classList.toggle('is-auth', !!(S.auth && S.auth.token));
     $('#blogTitle').textContent = S.blog.title || '狗子的Space';
     $('#blogTagline').textContent = S.blog.tagline || '';
+    /* banner 左上角的站点名称（logo 文字）也取自设置里的 space 名称，而非写死 */
+    var logoTxt = $('#sp-banner-logo-txt');
+    if (logoTxt) logoTxt.textContent = S.blog.title || '狗子的Space';
     document.title = (S.blog.title || '狗子的Space') + ' · 极简博客';
     /* 设置里上传的头像显示在 banner 哈士奇位置（无头像则回退默认图） */
     var logo = $('#blogLogo');
