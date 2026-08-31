@@ -100,10 +100,13 @@ body.is-auth #btnLogin{display:none}
 .sp-banner{
   position:relative;
   padding:clamp(24px,4.5vw,40px) clamp(18px,4vw,30px) 0;
-  background:
-    radial-gradient(120% 150% at 50% -45%, rgba(124,108,255,.26), transparent 55%),
-    radial-gradient(95% 130% at 94% -32%, rgba(59,130,246,.14), transparent 60%),
-    linear-gradient(135deg,#161626,#1d1d33 55%,#161626);  /* 比外壳更亮一档，浮起 + 顶部紫→蓝辉光 */
+  background-image:
+    linear-gradient(180deg, rgba(11,11,22,.50) 0%, rgba(11,11,22,.18) 42%, rgba(11,11,22,.68) 100%),
+    radial-gradient(120% 150% at 50% -45%, rgba(124,108,255,.22), transparent 55%),
+    url("../images/banner-alps.png");  /* 水彩阿尔卑斯雪山 banner */
+  background-size: cover, cover, cover;
+  background-position: center, center, center 45%;
+  background-repeat: no-repeat, no-repeat, no-repeat;
   border-bottom:1px solid var(--border);
 }
 .sp-banner-in{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
