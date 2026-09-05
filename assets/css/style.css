@@ -20,6 +20,10 @@
   --accent-soft:#1c1c33;
   --grad: linear-gradient(135deg,#7c6cff 0%,#5b6aff 55%,#3b82f6 100%);  /* 紫→靛→蓝，对应图中高亮条/CTA */
   --grad-soft: linear-gradient(135deg,rgba(124,108,255,.18),rgba(59,130,246,.14));
+  /* —— 自适应布局：内容随浏览器宽度伸缩 —— */
+  --container: 1560px;      /* 内容区最大宽度（超宽屏才生效，普通屏即满宽） */
+  --sidebar-w: 280px;       /* 侧栏宽度，断点处自动收窄 */
+  --gutter: clamp(14px, 2.6vw, 40px);  /* 左右留白随视口缩放 */
   --danger:    #ff6b6b;
   --ok:        #4ad991;
   --mark-bg:   #3a2e18;
@@ -57,13 +61,15 @@ h1,h2,h3,h4,p,ul,ol{margin:0}
 code{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--border);padding:0 5px;border-radius:5px;font-size:.85em;color:#cfd3da}
 mark{background:var(--mark-bg);color:var(--mark-fg);padding:0 2px;border-radius:3px}
 
-/* ---------- 外壳 ---------- */
+/* ---------- 外壳：整页自适应满宽（不再固定 1180px 居中卡片） ---------- */
 .sp-shell{
-  width:100%;max-width:1180px;margin:0 auto;
+  width:100%;
+  max-width:100%;          /* 铺满浏览器宽度 */
+  margin:0;
   background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:0 0 var(--radius) var(--radius);
-  box-shadow:var(--shadow);
+  border:none;
+  border-radius:0;
+  box-shadow:none;
   min-height:100vh;
 }
 
@@ -99,7 +105,8 @@ body.is-auth #btnLogin{display:none}
 /* ---------- Banner / 头部 ---------- */
 .sp-banner{
   position:relative;
-  padding:clamp(24px,4.5vw,40px) clamp(18px,4vw,30px) 0;
+  /* 背景图满幅铺满浏览器；左右留白随视口缩放 */
+  padding:clamp(24px,4.5vw,40px) var(--gutter) 0;
   background-image:
     linear-gradient(180deg, rgba(11,11,22,.50) 0%, rgba(11,11,22,.18) 42%, rgba(11,11,22,.68) 100%),
     radial-gradient(120% 150% at 50% -45%, rgba(124,108,255,.22), transparent 55%),
@@ -109,7 +116,10 @@ body.is-auth #btnLogin{display:none}
   background-repeat: no-repeat, no-repeat, no-repeat;
   border-bottom:1px solid var(--border);
 }
-.sp-banner-in{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.sp-banner-in{
+  width:100%;max-width:var(--container);margin:0 auto;   /* 满幅 banner 内的居中容器 */
+  display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap;
+}
 .sp-banner-txt{flex:0 1 auto;min-width:0}
 .sp-banner-in h1{font-size:clamp(22px,4vw,32px);font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2}
 .sp-banner-in p{margin-top:9px;color:var(--text-dim);font-size:14px}
@@ -134,16 +144,22 @@ body.is-auth #btnLogin{display:none}
 /* h1 由 logo 接管，隐藏避免重复 */
 #blogTitle{display:none}
 
-/* ---------- 主体：双栏 → 单栏 ---------- */
-.sp-body{display:flex;align-items:flex-start;gap:22px;padding:22px}
-.sp-sidebar{width:280px;flex:0 0 280px;position:sticky;top:14px;align-self:flex-start;min-width:0}
+/* ---------- 主体：双栏 → 单栏（随视口伸缩） ---------- */
+.sp-body{
+  width:100%;max-width:var(--container);margin:0 auto;
+  display:flex;align-items:flex-start;
+  gap:clamp(16px,1.8vw,28px);
+  padding:clamp(16px,2.2vw,30px) var(--gutter);
+}
+.sp-sidebar{width:var(--sidebar-w);flex:0 0 var(--sidebar-w);position:sticky;top:14px;align-self:flex-start;min-width:0}
 .sp-main{flex:1;min-width:0}
 
 /* ---------- Banner 页签：Chrome 效果（居中 / 加宽 / 等分，与下方内容区相连） ---------- */
 .banner-tabs{
   flex:1 1 100%;                    /* 独占一行，位于标题下方 */
   display:flex;gap:6px;align-items:flex-end;
-  max-width:640px;margin:0 auto;    /* 水平居中，控制总宽避免过宽 */
+  /* 原来写死 640px；改为随容器伸缩，仅在超宽屏才封顶 */
+  width:100%;max-width:min(100%, 880px);margin:0 auto;
 }
 .banner-tabs a{
   position:relative;display:flex;align-items:center;justify-content:center;
@@ -391,9 +407,18 @@ input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ---------- footer ---------- */
-.sp-footer{display:flex;gap:12px;flex-wrap:wrap;padding:15px 18px;background:var(--bg-soft);border-top:1px solid var(--border);font-size:12px;color:var(--text-mute)}
-.sp-foot-right{margin-left:auto}
-.sp-foot-right a{color:var(--text-dim)}
+/* 页脚：色带满幅铺满浏览器，文字在居中容器内对齐正文 */
+.sp-footer-band{
+  width:100%;
+  background:var(--bg-soft);
+  border-top:1px solid var(--border);
+}
+.sp-footer{
+  display:flex;gap:12px;flex-wrap:wrap;
+  width:100%;max-width:var(--container);margin:0 auto;
+  padding:15px var(--gutter);
+  font-size:12px;color:var(--text-mute);
+}
 
 /* ---------- 移动端抽屉遮罩 ---------- */
 .sp-scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:55;display:none}
@@ -405,23 +430,25 @@ body.sidebar-open .sp-scrim{display:block}
    响应式断点
    ===================================================== */
 
+/* 大屏：侧栏随视口收窄，正文获得更多空间 */
+@media (max-width:1440px){ :root{--sidebar-w:260px} }
+@media (max-width:1240px){ :root{--sidebar-w:240px} }
+
 /* 平板：收窄双栏 */
 @media (max-width:980px){
-  .sp-shell{border-radius:0;max-width:100%}
-  .sp-body{gap:16px;padding:16px}
-  .sp-sidebar{width:240px;flex:0 0 240px}
-  .ed-right{width:280px;flex:0 0 280px}
+  :root{--sidebar-w:220px}
+  .sp-body{gap:14px}
 }
 
 /* 手机：单栏 + 抽屉侧栏 */
 @media (max-width:760px){
+  :root{--gutter:14px}          /* 手机上收窄留白，内容仍占满屏宽 */
   body{font-size:14px}
   #btnSidebar{display:inline-flex}
   .sp-banner-top{gap:8px}
   .sp-banner-logo-txt{display:none}
   .sp-topbtn{padding:6px 11px;font-size:12.5px}
-  .sp-banner{padding:18px 14px 0}
-  .sp-body{padding:14px;gap:0;flex-direction:column}
+  .sp-body{gap:0;flex-direction:column}
   /* 侧栏变抽屉 */
   .sp-sidebar{
     position:fixed;top:0;left:0;height:100%;width:84%;max-width:330px;

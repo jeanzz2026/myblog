@@ -11,6 +11,16 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
+  /* 安全绑定：元素不存在时静默跳过。
+     重要：绝不能让「某个按钮已从 HTML 移除」导致整段 bindGlobal 抛错中断，
+     否则后续所有事件（含 document 委托 click）都不会被绑定，表现为「点击没反应」。 */
+  function on(sel, ev, fn) {
+    var el = typeof sel === 'string' ? $(sel) : sel;
+    if (!el) return null;
+    el.addEventListener(ev, fn);
+    return el;
+  }
+
   var S = {
     cfg: null, blog: null, auth: null, store: null, manifest: null, posts: [],
     view: 'home', postId: null,
@@ -222,7 +232,8 @@
     return null;
   }
 
-  function loadData() {
+  /* silent=true：后台静默刷新（不显示 loading 占位），用于保存后的异步对账 */
+  function loadData(silent) {
     var t = targetRepo();
     if (!t) {
       S.demo = true; S.posts = demoPosts(); S.manifest = null; S.store = null;
@@ -231,7 +242,7 @@
     }
     S.demo = false;
     S.store = new GitHubStore(t);
-    S.loading = true; render();
+    if (!silent) { S.loading = true; render(); }
 
     return S.store.readManifest().then(function (m) {
       if (!m && S.store.canWrite()) return S.store.bootstrap(S.blog);
@@ -490,9 +501,23 @@
     m.innerHTML = '<div class="sp-filterbar"><a href="#/">← 返回文章列表</a></div>' + entryHtml(p, true);
   }
 
+  /* markdown 解析很吃 CPU，列表里每篇都要解析一次。
+     把结果缓存到文章对象上（以 updatedAt + 正文长度 + 开头片段为 key），
+     这样翻页/点击/筛选等重复渲染不再反复解析全文——点击卡顿的主因之一。 */
+  function bodyCache(p, body) {
+    var key = (p.updatedAt || '') + '|' + (body ? body.length : 0) + '|' + (body ? body.slice(0, 80) : '');
+    if (p._mdKey !== key) {
+      p._mdKey = key;
+      p._mdHtml = MD.render(body || '');
+      p._mdPlainLen = MD.plain(body || '').length;
+    }
+    return p;
+  }
+
   function entryHtml(p, full) {
     var body = p.body || p.excerpt || '';
-    var long = MD.plain(body).length > 900;
+    bodyCache(p, body);
+    var long = p._mdPlainLen > 900;
     var collapsed = !full && long && !S.expand[p.id];
     var upd = p.updatedAt && p.updatedAt !== p.createdAt;
 
@@ -505,7 +530,7 @@
       '<span>📅 发表于 ' + fmtFull(p.createdAt) + '</span>' +
       (upd ? '<span>✏️ 最后更新 ' + fmtFull(p.updatedAt) + '（' + fromNow(p.updatedAt) + '）</span>' : '<span>' + fromNow(p.createdAt) + '</span>') +
       '</div></div>' +
-      '<div class="entry-body">' + MD.render(body) + '</div>' +
+      '<div class="entry-body">' + p._mdHtml + '</div>' +
       '<div class="entry-foot">' +
       ((p.tags || []).length ? '<span class="tags">' + p.tags.map(function (t) {
         return tagHtml(t);
@@ -688,12 +713,12 @@
       '</div></div>';
 
     var body = $('#edBody');
-    body.addEventListener('input', saveDraft);
-    $('#edTitle').addEventListener('input', saveDraft);
+    on(body, 'input', saveDraft);
+    on('#edTitle', 'input', saveDraft);
     initTagEditor();
     initLocationPicker();
-    $('#edFile').addEventListener('change', function (e) { uploadFiles(e.target.files); e.target.value = ''; });
-    body.addEventListener('paste', function (e) {
+    on('#edFile', 'change', function (e) { uploadFiles(e.target.files); e.target.value = ''; });
+    on(body, 'paste', function (e) {
       var items = (e.clipboardData && e.clipboardData.items) || [];
       var files = [];
       for (var i = 0; i < items.length; i++) {
@@ -701,8 +726,8 @@
       }
       if (files.length) { e.preventDefault(); uploadFiles(files); }
     });
-    body.addEventListener('dragover', function (e) { e.preventDefault(); });
-    body.addEventListener('drop', function (e) {
+    on(body, 'dragover', function (e) { e.preventDefault(); });
+    on(body, 'drop', function (e) {
       var fs = e.dataTransfer && e.dataTransfer.files;
       if (fs && fs.length) { e.preventDefault(); uploadFiles(fs); }
     });
@@ -1033,6 +1058,7 @@
       S.editing = null;
       /* 写入云端已成功，立即如实提示；刷新列表失败不再误报“发布失败” */
       toast(isDraft ? '草稿已保存 📝' : '已发布 ✅');
+      upsertLocalPost(payload);          /* 本地即时生效，无需再请求网络 */
       refreshAfterSave(payload.id, isDraft);
     }).catch(function (err) {
       busy(false);
@@ -1041,50 +1067,33 @@
     });
   }
 
-  /* 发布/草稿/删除/上传写入云端成功后，刷新列表并跳转；raw/API 网络抖动时自动重试 */
-  function refreshAfterSave(id, isDraft) {
-    var tries = 0;
-    function attempt() {
-      tries++;
-      loadData().then(function () {
-        if (!id) { go('/'); return; }
-        if (S.posts.some(function (x) { return x.id === id; })) {
-          go(isDraft ? '/' : '/post/' + encodeURIComponent(id));
-          return;
-        }
-        /* raw CDN 滞后：目标文章还没读到 → 直接用 API 单拉这篇（不受缓存影响） */
-        return fetchPostViaApi(id).then(function () {
-          go(isDraft ? '/' : '/post/' + encodeURIComponent(id));
-        });
-      }).catch(function (err) {
-        if (tries < 3) { setTimeout(attempt, 1200); return; }
-        toast('数据已保存到云端，但列表刷新失败：' + err.message, true);
-        go('/');
-      });
-    }
-    attempt();
+  /* 把刚写入云端的文章同步进本地列表（避免保存/发布后重新拉取全部文章） */
+  function upsertLocalPost(p) {
+    var byDateDesc = function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); };
+    S.posts = S.posts.filter(function (x) { return x.id !== p.id; });
+    S.posts.unshift(p);
+    S.posts.sort(byDateDesc);
+
+    S.manifest = S.manifest || { blog: {}, posts: [] };
+    var path = (S.store && S.store.postPath) ? S.store.postPath(p.id) : ('data/posts/' + p.id + '.json');
+    S.manifest.posts = (S.manifest.posts || []).filter(function (x) { return x.id !== p.id; });
+    S.manifest.posts.unshift({
+      id: p.id, title: p.title, path: path,
+      createdAt: p.createdAt, updatedAt: p.updatedAt,
+      tags: p.tags || [], mood: p.mood || '',
+      location: p.location || '', timezone: p.timezone || '',
+      excerpt: MD.excerpt(p.body, 160), images: (p.images || []).length
+    });
+    S.manifest.posts.sort(byDateDesc);
   }
 
-  /* 用 API 强制读取单篇文章（绕开 raw CDN 缓存），并补进本地列表与清单 */
-  function fetchPostViaApi(id) {
-    if (!S.store) return Promise.reject(new Error('未连接云端'));
-    return S.store.getFile(S.store.postPath(id)).then(function (f) {
-      if (!f) throw new Error('文章文件不存在：' + id);
-      var p;
-      try { p = JSON.parse(f.text); } catch (e) { throw new Error('文章文件解析失败'); }
-      S.manifest = S.manifest || { blog: {}, posts: [] };
-      if (!S.manifest.posts.some(function (x) { return x.id === id; })) {
-        S.manifest.posts.unshift({
-          id: p.id, title: p.title, path: S.store.postPath(id),
-          createdAt: p.createdAt, updatedAt: p.updatedAt,
-          tags: p.tags || [], mood: p.mood || '',
-          excerpt: MD.excerpt(p.body || '', 160), images: (p.images || []).length
-        });
-      }
-      S.posts = S.posts.filter(function (x) { return x.id !== id; });
-      S.posts.unshift(p);
-      return p;
-    });
+  /* 发布/草稿/删除/上传写入云端成功后：
+     本地数据已同步，直接渲染跳转（0 次额外请求）——此前每次保存都要重新拉取
+     整个清单 + 全部文章（N+1 次请求），是「保存迟滞」的主因。
+     随后在后台静默拉一次，保证与云端最终一致。 */
+  function refreshAfterSave(id, isDraft) {
+    go(!id ? '/' : (isDraft ? '/' : '/post/' + encodeURIComponent(id)));
+    if (S.store) setTimeout(function () { loadData(true); }, 600);
   }
 
   /* Ctrl+S：新文章快速存草稿，编辑已有文章则保存修改 */
@@ -1311,36 +1320,36 @@
   function bindGlobal() {
     buildEmoji();
 
-    $('#btnLogin').addEventListener('click', function (e) { e.preventDefault(); openLogin(); });
-    $('#btnLogout').addEventListener('click', function (e) { e.preventDefault(); doLogout(); });
-    $('#btnSettings').addEventListener('click', function (e) { e.preventDefault(); openSettings(); });
-    $('#footHelp').addEventListener('click', function (e) { e.preventDefault(); openModal('helpModal'); });
-    $('#doLogin').addEventListener('click', doLogin);
-    $('#doSaveSettings').addEventListener('click', saveSettings);
-    $('#doSaveAbout').addEventListener('click', saveAbout);
-    $('#aboutImgFile').addEventListener('change', function (e) {
+    on('#btnLogin', 'click', function (e) { e.preventDefault(); openLogin(); });
+    on('#btnLogout', 'click', function (e) { e.preventDefault(); doLogout(); });
+    on('#btnSettings', 'click', function (e) { e.preventDefault(); openSettings(); });
+    /* 说明：footer 里的「这是怎么工作的？」入口已按需求移除，
+       此处若元素不存在直接跳过，不能因此中断后续绑定。 */
+    on('#footHelp', 'click', function (e) { e.preventDefault(); openModal('helpModal'); });
+    on('#doLogin', 'click', doLogin);
+    on('#doSaveSettings', 'click', saveSettings);
+    on('#doSaveAbout', 'click', saveAbout);
+    on('#aboutImgFile', 'change', function (e) {
       var f = e.target.files && e.target.files[0];
       if (f) uploadAboutImage(f);
       e.target.value = '';
     });
-    $('#aboutEmojiBtn').addEventListener('click', function (e) { e.preventDefault(); showEmoji(this, 'about'); });
-    $('#inToken').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
-    $('#setAvatarFile').addEventListener('change', function (e) {
+    on('#aboutEmojiBtn', 'click', function (e) { e.preventDefault(); showEmoji(this, 'about'); });
+    on('#inToken', 'keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+    on('#setAvatarFile', 'change', function (e) {
       var f = e.target.files && e.target.files[0];
       if (f) uploadAvatar(f);
       e.target.value = '';
     });
-    $('#setAvatarClear').addEventListener('click', function () {
-      $('#setAvatar').value = '';
+    on('#setAvatarClear', 'click', function () {
+      var av = $('#setAvatar'); if (av) av.value = '';
       var prev = $('#setAvatarPrev');
-      prev.removeAttribute('src'); prev.hidden = true;
+      if (prev) { prev.removeAttribute('src'); prev.hidden = true; }
     });
 
     // 移动端侧栏抽屉
-    var btnSb = $('#btnSidebar');
-    if (btnSb) btnSb.addEventListener('click', function () { document.body.classList.toggle('sidebar-open'); });
-    var scrim = $('#scrim');
-    if (scrim) scrim.addEventListener('click', function () { document.body.classList.remove('sidebar-open'); });
+    on('#btnSidebar', 'click', function () { document.body.classList.toggle('sidebar-open'); });
+    on('#scrim', 'click', function () { document.body.classList.remove('sidebar-open'); });
 
     document.addEventListener('click', function (e) {
       if (!e.target || !e.target.closest) return;

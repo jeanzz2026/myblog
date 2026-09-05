@@ -185,8 +185,34 @@
       return self.putText(MANIFEST, text, message, f && f.sha);
     }).catch(function (err) {
       if (tries > 1) {
-        return new Promise(function (res) { setTimeout(res, 1200); })
+        return new Promise(function (res) { setTimeout(res, 500); })
           .then(function () { return self.putManifestRetry(text, message, tries - 1); });
+      }
+      throw err;
+    });
+  };
+
+  /* 清单「读-改-写」原子操作：
+     一次 GET 同时拿到【最新内容 + 最新 sha】，本地 mutate 后立刻 PUT。
+     相比「先 readManifest() 再 writeManifest()」少一次网络往返，
+     同时保证内容与 sha 都是服务端最新的，不会因过期缓存导致 sha 冲突。 */
+  GitHubStore.prototype.updateManifest = function (mutate, message, tries) {
+    var self = this;
+    tries = tries || 3;
+    return this.getFile(MANIFEST).then(function (f) {
+      var m = null;
+      if (f) { try { m = JSON.parse(f.text); } catch (e) { m = null; } }
+      m = m || { blog: {}, posts: [] };
+      m.blog = m.blog || {};
+      if (!Array.isArray(m.posts)) m.posts = [];
+      mutate(m);
+      m.updatedAt = new Date().toISOString();
+      m.generator = 'msn-space-blog';
+      return self.putText(MANIFEST, JSON.stringify(m, null, 2), message, f && f.sha);
+    }).catch(function (err) {
+      if (tries > 1) {
+        return new Promise(function (res) { setTimeout(res, 500); })
+          .then(function () { return self.updateManifest(mutate, message, tries - 1); });
       }
       throw err;
     });
@@ -217,20 +243,19 @@
     });
   };
 
-  /* 保存文章：写文章文件后，重新读取【最新】清单（不依赖可能过期的本地缓存），
-     合并 meta 后再写回。避免并发/过期缓存导致的 "sha does not match"。 */
+  /* 保存文章：写文章文件后，用 updateManifest 一次往返完成清单「读-改-写」。
+     不再依赖可能过期的本地缓存，也不会因过期 sha 被拒。 */
   GitHubStore.prototype.savePost = function (post, manifest) {
     var self = this;
     var path = this.postPath(post.id);
-    var isNew = true;
+    var isNew = !(manifest && (manifest.posts || []).some(function (p) { return p.id === post.id; }));
     var text = JSON.stringify(post, null, 2);
 
     return this.getFile(path).then(function (f) {
       isNew = !f;
       return self.putText(path, text, (isNew ? 'post: ' : 'edit: ') + post.title, f && f.sha);
     }).then(function () {
-      return self.readManifest().then(function (m) {
-        m = m || { blog: {}, posts: [] };
+      return self.updateManifest(function (m) {
         var meta = {
           id: post.id, title: post.title, path: path,
           createdAt: post.createdAt, updatedAt: post.updatedAt,
@@ -242,21 +267,18 @@
         m.posts = (m.posts || []).filter(function (p) { return p.id !== post.id; });
         m.posts.unshift(meta);
         m.posts.sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
-        return self.writeManifest(m, (isNew ? 'post: ' : 'edit: ') + post.title);
-      });
+      }, (isNew ? 'post: ' : 'edit: ') + post.title);
     });
   };
 
-  /* 删除文章：先删文章文件，再重新读取【最新】清单（而非依赖可能过期的本地缓存），
-     过滤掉该篇后写回。这样即使本地 S.manifest 与服务器不一致，也能拿到正确 sha 与内容。 */
+  /* 删除文章：先删文章文件，再用 updateManifest 一次往返把该篇从清单里剔除。
+     内容与 sha 均取自服务端最新，即使本地缓存过期也能正确写入。 */
   GitHubStore.prototype.removePost = function (post, manifest) {
     var self = this;
     return this.deleteFile(this.postPath(post.id), 'remove: ' + post.title).then(function () {
-      return self.readManifest().then(function (m) {
-        if (!m) return null; // 清单已不存在，无需更新
+      return self.updateManifest(function (m) {
         m.posts = (m.posts || []).filter(function (p) { return p.id !== post.id; });
-        return self.writeManifest(m, 'remove: ' + post.title);
-      });
+      }, 'remove: ' + post.title);
     });
   };
 
