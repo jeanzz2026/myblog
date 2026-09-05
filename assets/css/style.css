@@ -36,6 +36,51 @@
 }
 html[data-skin="dark"]{ /* 兜底 */ }
 
+/* =========================================================
+   浅色背景主题（data-skin="light"）
+   说明：在「现有配色不变」前提下，仅将页面背景 / 卡片 / 正文翻为浅色；
+   品牌强调色（紫→蓝渐变 --grad、--accent 系列）与深色主题完全一致，
+   保证视觉识别统一。顶部阿尔卑斯 banner 因是照片+暗色蒙版，保持原样以衬白字。
+   ========================================================= */
+html[data-skin="light"]{
+  --bg:        #f3f4fa;
+  --bg-soft:   #e9ebf4;
+  --surface:   #ffffff;
+  --surface-2: #f6f7fc;
+  --surface-3: #eceef6;
+  --border:    #dde0ec;
+  --border-soft:#e9ebf4;
+  --text:      #1a1a28;
+  --text-dim:  #54586e;
+  --text-mute: #8b8da6;
+  /* —— 以下强调色与深色主题完全一致，刻意不动，保持「配色不变」 —— */
+  --accent:    #8b7bff;
+  --accent-2:  #5b8cff;
+  --accent-3:  #b4a3ff;
+  --accent-soft:#ece9ff;
+  --grad: linear-gradient(135deg,#7c6cff 0%,#5b6aff 55%,#3b82f6 100%);
+  --grad-soft: linear-gradient(135deg,rgba(124,108,255,.18),rgba(59,130,246,.14));
+  --mark-bg:   #fbf1cf;
+  --mark-fg:   #7a5e0e;
+  --shadow:    0 14px 44px rgba(20,20,45,.12);
+}
+/* 深色主题里写死的正文/标题颜色，在浅色背景下需反转，否则白字白底不可见 */
+html[data-skin="light"] .sp-banner-in p{color:rgba(255,255,255,.80)}
+html[data-skin="light"] .mod-bar{color:#1a1a28}
+html[data-skin="light"] .pf-name{color:#1a1a28}
+html[data-skin="light"] .sp-dialog-bar{color:#1a1a28}
+html[data-skin="light"] .sp-x:hover{color:#1a1a28}
+html[data-skin="light"] .entry-title{color:#16161f}
+html[data-skin="light"] .entry-body{color:#2a2c3a}
+html[data-skin="light"] .entry-body h2,
+html[data-skin="light"] .entry-body h3{color:#16161f}
+html[data-skin="light"] .entry-body pre code{color:#2a2c3a}
+html[data-skin="light"] .kv td:last-child{color:#1a1a28}
+html[data-skin="light"] .banner-tabs a.on{color:#16161f}
+html[data-skin="light"] code{color:#3a3c4a}
+html[data-skin="light"] .ed-tag-chip{background:rgba(0,0,0,.03)}
+html[data-skin="light"] .ed-swatch[data-active="1"]{border-color:#1a1a28}
+
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}

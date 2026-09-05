@@ -219,7 +219,34 @@
   }
 
   function applySkin(skin) {
-    document.documentElement.setAttribute('data-skin', skin || 'dark');
+    var s = (skin === 'light') ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-skin', s);
+    var b = $('#btnSkin');
+    if (b) {
+      var use = b.querySelector('use');
+      if (use) use.setAttribute('href', s === 'light' ? '#ic-moon' : '#ic-sun');
+      b.title = (s === 'light') ? '切换到深色背景' : '切换到浅色背景';
+    }
+  }
+
+  /* 设置主题：同时写入本机 localStorage（访客也持久）与仓库清单（登录后跨设备同步） */
+  function setSkin(skin, persist) {
+    var s = (skin === 'light') ? 'light' : 'dark';
+    S.blog.skin = s;
+    applySkin(s);
+    var local = loadLocal();
+    local.skin = s;
+    saveLocal(local);
+    if (persist && S.manifest && S.store && S.store.canWrite()) {
+      S.store.updateManifest(function (m) {
+        m.blog = m.blog || {};
+        m.blog.skin = s;
+      }, 'chore: update skin preference');
+    }
+  }
+
+  function toggleSkin() {
+    setSkin(S.blog.skin === 'light' ? 'dark' : 'light', true);
   }
 
   function targetRepo() {
@@ -1323,6 +1350,7 @@
     on('#btnLogin', 'click', function (e) { e.preventDefault(); openLogin(); });
     on('#btnLogout', 'click', function (e) { e.preventDefault(); doLogout(); });
     on('#btnSettings', 'click', function (e) { e.preventDefault(); openSettings(); });
+    on('#btnSkin', 'click', function (e) { e.preventDefault(); toggleSkin(); });
     /* 说明：footer 里的「这是怎么工作的？」入口已按需求移除，
        此处若元素不存在直接跳过，不能因此中断后续绑定。 */
     on('#footHelp', 'click', function (e) { e.preventDefault(); openModal('helpModal'); });

@@ -305,7 +305,7 @@
         blog: Object.assign({
           title: '我的 Space',
           tagline: '记录一些不定期发生的小事 ✨',
-          avatar: '', about: '', skin: 'blue',
+          avatar: '', about: '', skin: 'dark',
           owner: self.owner
         }, blogMeta || {}),
         posts: [],
